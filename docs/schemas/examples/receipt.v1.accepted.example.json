@@ -1,0 +1,14 @@
+{
+  "receipt_id": "0192c3f1-2c8f-7b21-8e3f-7a2b3c4d5e6f",
+  "kind": "accepted",
+  "mandate_id": "0192c3f0-5b7e-7a10-9d2e-6f1a2b3c4d5e",
+  "mandate_envelope_hash": "9f2c1a7b3e5d4c6f8a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f",
+  "mandate_anchor": { "topic": "0.0.10366000", "seq": 1, "consensus_ts": "1788600000.000000001" },
+  "taken": [
+    "Trades on the history screen are grouped by calendar day with a date header",
+    "Each day header shows the number of unread trades for that day",
+    "Existing sort order inside a day is preserved"
+  ],
+  "issued_at": "2026-09-05T14:02:10Z",
+  "issuer": "agency-x"
+}

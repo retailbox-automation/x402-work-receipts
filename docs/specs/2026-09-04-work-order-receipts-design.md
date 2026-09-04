@@ -1,15 +1,15 @@
 # Design: work orders and receipts between two organizations' agents, paid with x402 on Hedera
 
-Date: 2026-09-04 (ETHOnline 2026, day 1). Status: approved direction, spike in progress.
+Date: 2026-09-04 (ETHOnline 2026, day 1). Status: approved direction; spike passed 12:47 EDT (see `spike/README.md`); schemas aligned with the source protocol 12:5x EDT.
 
 ## Problem
 Two companies each run AI agents. Company A's agent wants Company B's agent to do a unit of work (a backlog story), pay for it without a human, a card or an API key, and later prove to anyone — including an auditor who trusts neither company's servers — what was ordered, what was paid and what was delivered. Today's x402 demos pay for a single HTTP response; a unit of work lives for days and settles in stages. Existing marketplaces keep the truth in their own database.
 
 ## What we build
-1. **Work-order protocol.** A signed JSON `WorkOrder` (id, spec, acceptance criteria, deadline, price split), a signed `Acceptance`, a signed `Receipt` (order id, payment ids, deliverable links). Canonical JSON (RFC 8785) + Ed25519 signatures for envelopes; x402 payments signed with ECDSA (Hedera requirement).
+1. **Work-order protocol.** Documents follow the canonical schemas in `docs/schemas/` (source: RetailBox A2A Bridge spec 2026-09-04): `mandate.v1` (customer → contractor: story ref, title, acceptance criteria, frame, due), `receipt.v1` with `kind: accepted` on intake and `kind: delivered` on completion (mandate envelope hash, anchor, taken/declined, result links). This repository adds the `payment.v1` profile — a `payment` object with the x402 legs — via `allOf`, because the base schemas carry no money fields by design. Canonical JSON (RFC 8785) + Ed25519 signatures for envelopes; x402 payments signed with ECDSA (Hedera requirement).
 2. **Contractor agent (Company B).** HTTP service with two x402-gated routes settled through the Blocky402 facilitator on Hedera testnet:
-   - `POST /orders` — accept a work order; the 402 price is the intake fee. Returns a signed `Acceptance`.
-   - `GET /orders/{id}/receipt` — the 402 price is the balance; returns the signed `Receipt` once the deliverable exists.
+   - `POST /mandates` — accept a mandate; the 402 price is the intake fee. Returns a signed `receipt.v1` with `kind: accepted`.
+   - `GET /mandates/{id}/receipt` — the 402 price is the balance; returns the signed `receipt.v1` with `kind: delivered` (+ `payment`) once the deliverable exists.
    Between the two calls the contractor does the work (in the demo: the deliverable is a PR link + staging URL produced by the contractor's pipeline; for the hackathon this may be simulated deterministically).
 3. **Customer agent (Company A).** Signs the order, pays both 402s with `@x402/fetch`, stores the receipt.
 4. **Public audit log on HCS.** Every step (order hash, intake payment tx, acceptance hash, delivery hash, balance payment tx, receipt hash) is anchored as a message on a Hedera Consensus Service topic (HIP-991 custom fee optional). Only hashes and public ids — never the content.
@@ -20,15 +20,17 @@ Two companies each run AI agents. Company A's agent wants Company B's agent to d
 ## Data flow
 ```
 Customer agent                 Contractor service                Hedera
-  sign WorkOrder  ──POST /orders──▶ 402 (intake fee) ─┐
-  pay via x402    ──POST /orders + PAYMENT-SIGNATURE─▶ verify+settle via Blocky402 ──▶ TransferTransaction
-                  ◀── Acceptance (signed) ──          anchor(order#, tx, acceptance#) ─▶ HCS topic message
+  sign mandate.v1 ──POST /mandates─▶ 402 (intake fee) ─┐
+  pay via x402    ──POST /mandates + PAYMENT-SIGNATURE▶ verify+settle via Blocky402 ──▶ TransferTransaction
+                  ◀── receipt.v1 accepted ──          anchor(order#, tx, acceptance#) ─▶ HCS topic message
                                                        ... work happens ...
                                                        anchor(delivery#) ────────────▶ HCS topic message
   GET /receipt    ──────────────────────────▶ 402 (balance)
   pay via x402    ──GET /receipt + PAYMENT-SIGNATURE─▶ settle via Blocky402 ────────▶ TransferTransaction
-                  ◀── Receipt (signed) ──              anchor(receipt#, tx) ─────────▶ HCS topic message
+                  ◀── receipt.v1 delivered+payment              anchor(receipt#, tx) ─────────▶ HCS topic message
 Anyone: verifier --topic 0.0.X --receipt receipt.json  → reads mirror node → PASS / FAIL with reasons
+
+What the chain proves and does not prove is stated in `docs/schemas/README.md` and printed by the verifier on every run.
 ```
 
 ## Components and boundaries

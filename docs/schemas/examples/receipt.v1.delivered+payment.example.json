@@ -1,0 +1,24 @@
+{
+  "receipt_id": "0192c3f9-9a1b-7c32-8f4a-8b3c4d5e6f70",
+  "kind": "delivered",
+  "mandate_id": "0192c3f0-5b7e-7a10-9d2e-6f1a2b3c4d5e",
+  "mandate_envelope_hash": "9f2c1a7b3e5d4c6f8a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f",
+  "mandate_anchor": { "topic": "0.0.10366000", "seq": 1, "consensus_ts": "1788600000.000000001" },
+  "taken": [
+    "Trades on the history screen are grouped by calendar day with a date header",
+    "Each day header shows the number of unread trades for that day",
+    "Existing sort order inside a day is preserved"
+  ],
+  "result": { "pr_url": "https://git.example.com/client-y/web/-/merge_requests/101", "staging_url": "https://staging.example-client.app/history", "notion_status": "Testing" },
+  "issued_at": "2026-09-07T18:30:00Z",
+  "issuer": "agency-x",
+  "payment": {
+    "network": "hedera:testnet",
+    "asset": "0.0.0",
+    "facilitator": "https://api.testnet.blocky402.com",
+    "payer": "0.0.10365982",
+    "payee": "0.0.10365984",
+    "intake": { "tinybars": 1000000, "transaction_id": "0.0.7162784@1788539653.433840739", "consensus_timestamp": "1788539659.779738844", "anchor": { "topic": "0.0.10366000", "seq": 2, "consensus_ts": null } },
+    "balance": { "tinybars": 4000000, "transaction_id": "0.0.7162784@1788799999.000000001" }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2a.getaim.ai/schemas/mandate.v1.schema.json",
+  "title": "mandate.v1",
+  "description": "Наряд заказчика исполнителю: реальная стори из трекера заказчика, без денег и часов. Прикладной слой в поле `data` конверта Agent Post; schema-тег конверта = `mandate.v1`; ответ приходит в `thread_id` наряда.",
+  "$comment": "Источник и норматив: Retailbox A2A Bridge, docs/superpowers/specs/2026-09-04-a2a-pilot-mandate-receipt-design.md §3.1 (решения Михаила 04.09.2026). Денежных/часовых полей нет по решению 04.09 — валидатор Bridge их отвергает. Расширения (например payment в публичном профиле x402-work-receipts) — ОТДЕЛЬНОЙ схемой через allOf поверх этой, не правкой этого файла; unevaluatedProperties:false закрывает всё, что расширение не объявило.",
+  "type": "object",
+  "unevaluatedProperties": false,
+  "required": ["mandate_id", "story_ref", "story_url", "title", "acceptance", "frame", "issued_at", "issuer"],
+  "properties": {
+    "mandate_id": { "type": "string", "minLength": 1, "maxLength": 64, "description": "id наряда у заказчика (uuid7)" },
+    "story_ref": { "type": "string", "minLength": 1, "maxLength": 128, "description": "id стори в трекере заказчика (Notion V3: uuid страницы)" },
+    "story_url": { "type": "string", "format": "uri", "pattern": "^https://", "maxLength": 2048, "description": "ссылка на карточку стори" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200, "description": "заголовок стори дословно" },
+    "acceptance": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "description": "критерии приёмки дословно из карточки" },
+    "frame": { "type": "string", "minLength": 1, "maxLength": 500, "description": "рамка словами: проект, эпик, ветка назначения, стейджинг" },
+    "due": { "type": "string", "format": "date", "description": "срок (дата)" },
+    "issued_at": { "type": "string", "format": "date-time", "description": "момент выдачи, UTC" },
+    "issuer": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,31}$", "description": "handle заказчика (= from конверта; формат handle из спеки Agent Post §6)" }
+  }
+}
