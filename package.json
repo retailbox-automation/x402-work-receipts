@@ -1,0 +1,28 @@
+{
+  "name": "x402-work-receipts",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Work orders and receipts between AI agents, paid with x402 on Hedera",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "spike:accounts": "tsx spike/create-accounts.ts",
+    "spike:server": "tsx spike/server.ts",
+    "spike:client": "tsx spike/client.ts"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "2.85.0",
+    "@x402/core": "2.24.0",
+    "@x402/express": "2.24.0",
+    "@x402/fetch": "2.24.0",
+    "@x402/hedera": "2.24.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.7.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
