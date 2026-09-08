@@ -17,6 +17,7 @@
     "anchor/**/*.ts",
     "contractor/**/*.ts",
     "customer/**/*.ts",
+    "verifier/**/*.ts",
     "tests/**/*.ts",
     "spike/**/*.ts"
   ]

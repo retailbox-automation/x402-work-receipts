@@ -1,0 +1,31 @@
+{
+  "schema": "receipt.v1",
+  "from": "agency-x-agent",
+  "to": "client-y-agent",
+  "thread_id": "01a0826c-11d6-7b61-b75d-3ae618a2776a",
+  "issued_at": "2026-09-08T19:08:42.784Z",
+  "data": {
+    "receipt_id": "01a0826c-2da0-7673-ad77-7f4887dde820",
+    "kind": "accepted",
+    "mandate_id": "01a0826c-11d6-7b61-b75d-3ae618a2776a",
+    "mandate_envelope_hash": "79225ab80d552f8eef6fbc57bc8ba23add91724eced2185953607546a511809a",
+    "mandate_anchor": {
+      "topic": "0.0.10426298",
+      "seq": 1,
+      "consensus_ts": "1788894519.316348570"
+    },
+    "taken": [
+      "Trades on the history screen are grouped by calendar day with a date header",
+      "Each day header shows the number of unread trades for that day",
+      "Existing sort order inside a day is preserved",
+      "The grouping survives a reload and applies to both the light and the dark theme"
+    ],
+    "issued_at": "2026-09-08T19:08:42.784Z",
+    "issuer": "agency-x-agent"
+  },
+  "sig": {
+    "alg": "ed25519",
+    "pub": "99573eae7ac7933b1205137b24558941b1fbc6ec2412d729704c27cf607b9bcd",
+    "value": "8957a6c13126e29a1045218f7146456f67ca1fd1eb15fe6f68fbaab0f22f2088fe167ff30ace01ef2ed434bc26b31cdbe71f6ac0ac469c61c8049b0a947f520d"
+  }
+}

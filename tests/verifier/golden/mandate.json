@@ -1,0 +1,28 @@
+{
+  "schema": "mandate.v1",
+  "from": "client-y-agent",
+  "to": "agency-x-agent",
+  "thread_id": "01a0826c-11d6-7b61-b75d-3ae618a2776a",
+  "issued_at": "2026-09-08T19:08:35.670Z",
+  "data": {
+    "mandate_id": "01a0826c-11d6-7b61-b75d-3ae618a2776a",
+    "story_ref": "3f9e2a7c-1b4d-4e8f-9a6b-2c5d7e8f9a0b",
+    "story_url": "https://client-y.example.com/board/story/3f9e2a7c",
+    "title": "Group trades by day and show the unread summary",
+    "acceptance": [
+      "Trades on the history screen are grouped by calendar day with a date header",
+      "Each day header shows the number of unread trades for that day",
+      "Existing sort order inside a day is preserved",
+      "The grouping survives a reload and applies to both the light and the dark theme"
+    ],
+    "frame": "Client Y web app; epic 'History screen'; target branch dev; verification on the client's staging",
+    "due": "2026-09-12",
+    "issued_at": "2026-09-08T19:08:35.670Z",
+    "issuer": "client-y-agent"
+  },
+  "sig": {
+    "alg": "ed25519",
+    "pub": "92a886c29970f8d4bb0fce808f6cf5106df37254b78950b075ebb6bd16fa59da",
+    "value": "0fad3dfaaf1421f33e07264ab7c18e5737ecd95e942251cae7918d18cb17a015d81c121e59dc5d26800df98643c5cfe57da2f0c21223da6779469b3208002b00"
+  }
+}
