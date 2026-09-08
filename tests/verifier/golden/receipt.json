@@ -1,0 +1,61 @@
+{
+  "schema": "receipt.v1+payment.v1",
+  "from": "agency-x-agent",
+  "to": "client-y-agent",
+  "thread_id": "01a0826c-11d6-7b61-b75d-3ae618a2776a",
+  "issued_at": "2026-09-08T19:08:57.001Z",
+  "data": {
+    "receipt_id": "01a0826c-6529-7354-b656-3eb0f535486b",
+    "kind": "delivered",
+    "mandate_id": "01a0826c-11d6-7b61-b75d-3ae618a2776a",
+    "mandate_envelope_hash": "79225ab80d552f8eef6fbc57bc8ba23add91724eced2185953607546a511809a",
+    "mandate_anchor": {
+      "topic": "0.0.10426298",
+      "seq": 1,
+      "consensus_ts": "1788894519.316348570"
+    },
+    "taken": [
+      "Trades on the history screen are grouped by calendar day with a date header",
+      "Each day header shows the number of unread trades for that day",
+      "Existing sort order inside a day is preserved",
+      "The grouping survives a reload and applies to both the light and the dark theme"
+    ],
+    "result": {
+      "pr_url": "https://git.example.com/agency-x/client-y-web/-/merge_requests/460",
+      "staging_url": "https://staging.example-client.app/preview/6816548",
+      "notion_status": "Testing"
+    },
+    "issued_at": "2026-09-08T19:08:57.001Z",
+    "issuer": "agency-x-agent",
+    "payment": {
+      "network": "hedera:testnet",
+      "asset": "0.0.0",
+      "facilitator": "https://api.testnet.blocky402.com",
+      "payer": "0.0.10365982",
+      "payee": "0.0.10365984",
+      "intake": {
+        "tinybars": 1000000,
+        "transaction_id": "0.0.7162784@1788894509.185405540",
+        "anchor": {
+          "topic": "0.0.10426298",
+          "seq": 2,
+          "consensus_ts": "1788894521.194084184"
+        }
+      },
+      "balance": {
+        "tinybars": 4000000,
+        "transaction_id": "0.0.7162784@1788894527.494125454",
+        "anchor": {
+          "topic": "0.0.10426298",
+          "seq": 5,
+          "consensus_ts": "1788894535.997835104"
+        }
+      }
+    }
+  },
+  "sig": {
+    "alg": "ed25519",
+    "pub": "99573eae7ac7933b1205137b24558941b1fbc6ec2412d729704c27cf607b9bcd",
+    "value": "7a09a6af4b0aea84707201c11d71a8b311379c69427ad3dfa2dab4c6d782e2bb1c98fe35a74b39f74eafa517ad661c4f0ec8e76b0d7e63bc5a4420bfb1106d03"
+  }
+}

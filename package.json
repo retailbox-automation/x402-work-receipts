@@ -13,7 +13,8 @@
     "spike:client": "tsx spike/client.ts",
     "anchor:create-topic": "tsx anchor/topic.ts",
     "contractor:start": "tsx contractor/server.ts",
-    "customer": "tsx customer/cli.ts"
+    "customer": "tsx customer/cli.ts",
+    "verify": "tsx verifier/cli.ts"
   },
   "dependencies": {
     "@hiero-ledger/sdk": "2.85.0",
