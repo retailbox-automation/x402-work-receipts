@@ -7,10 +7,11 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "test:unit": "vitest run tests",
+    "test:unit": "vitest run --exclude '**/*.integration.test.ts'",
     "spike:accounts": "tsx spike/create-accounts.ts",
     "spike:server": "tsx spike/server.ts",
-    "spike:client": "tsx spike/client.ts"
+    "spike:client": "tsx spike/client.ts",
+    "anchor:create-topic": "tsx anchor/topic.ts"
   },
   "dependencies": {
     "@hiero-ledger/sdk": "2.85.0",

@@ -11,7 +11,7 @@
 ## Global Constraints
 - Every commit inside the hacking window (from 2026-09-04 12:00 EDT); author `RetailBox <admin@retailbox-automation.com>`; commit messages in plain English, no tool attribution.
 - No secrets in tracked files. `.env` only (`HEDERA_OPERATOR_*`, `PAYER_*`, `RECEIVER_*`, `CONTRACTOR_*`, `CUSTOMER_*`, `ANCHOR_TOPIC_ID`).
-- No client or partner names anywhere in the repo (check with `grep -rniw -E 'trigonum|ignat' .`). Demo data is synthetic (Agency X / Client Y).
+- No client or partner names anywhere in the repo (checked with a `grep -rniw` scan over the partner-name list kept outside this repository). Demo data is synthetic (Agency X / Client Y).
 - Base schemas `docs/schemas/mandate.v1.schema.json` and `receipt.v1.schema.json` are byte-identical copies of the source and are never edited; `payment.v1.schema.json` is regenerated only via `docs/schemas/build_payment_profile.py`.
 - Amounts in tinybars. Facilitator `https://api.testnet.blocky402.com`; network `hedera:testnet`; HBAR asset `0.0.0`; client must opt HBAR in via `setSpendControls({allowedAssets:[{network:"hedera:testnet", asset:"0.0.0", maxAmountPerPayment}]})` (spike gotcha 1).
 - Transaction ids: facilitator returns `0.0.X@sec.nanos`; mirror node uses `0.0.X-sec-nanos` (spike gotcha 2). One helper does the conversion; nothing else compares ids.
