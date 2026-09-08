@@ -35,8 +35,16 @@ export const PAYMENT_RECEIPT_SCHEMA = "receipt.v1+payment.v1";
 /** The only work-order format this service accepts, named in every refusal. */
 export const EXPECTED_SCHEMA = "mandate.v1";
 
-/** Where that format is specified, so a refusal is actionable on its own. */
-export const EXPECTED_SCHEMA_URL = "https://a2a.getaim.ai/schemas/mandate.v1.schema.json";
+/**
+ * Where that format is specified, so a refusal is actionable on its own.
+ *
+ * The schema's own `$id` points at the source protocol's namespace, which is
+ * not a published document. A refusal is useless if the reader cannot open the
+ * url it names, so this is the copy in this repository — the exact bytes this
+ * service validates against.
+ */
+export const EXPECTED_SCHEMA_URL =
+  "https://raw.githubusercontent.com/retailbox-automation/x402-work-receipts/main/docs/schemas/mandate.v1.schema.json";
 
 /** Version tag inside a payment anchor's hash preimage. */
 const PAYMENT_ANCHOR_VERSION = "wr-payment.v1";
