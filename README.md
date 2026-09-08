@@ -182,25 +182,25 @@ protocol spec §4.2 — and which the verifier reads from that file and prints o
 ## A real run
 
 Every id below is from the run recorded in [`demo/last-run.json`](demo/last-run.json) — order
-`01a0828d-24af-7401-8935-fa73555a258a`, 2026-09-08, Hedera testnet.
+`01a08295-fcca-725a-ad7e-fc9448cfa6be`, 2026-09-08, Hedera testnet.
 
 | What | Where |
 |---|---|
 | Audit topic | [`0.0.10426298`](https://hashscan.io/testnet/topic/0.0.10426298) |
-| Intake payment, 1 000 000 tinybars | [`0.0.7162784@1788896678.724313374`](https://hashscan.io/testnet/transaction/0.0.7162784@1788896678.724313374) |
-| Balance payment, 4 000 000 tinybars | [`0.0.7162784@1788896685.277607763`](https://hashscan.io/testnet/transaction/0.0.7162784@1788896685.277607763) |
+| Intake payment, 1 000 000 tinybars | [`0.0.7162784@1788897257.139657829`](https://hashscan.io/testnet/transaction/0.0.7162784@1788897257.139657829) |
+| Balance payment, 4 000 000 tinybars | [`0.0.7162784@1788897269.019507994`](https://hashscan.io/testnet/transaction/0.0.7162784@1788897269.019507994) |
 | Payer → payee | `0.0.10365982` → `0.0.10365984`, network fee paid by the facilitator `0.0.7162784` |
 
 The six anchors of that one order, in consensus order:
 
 | # | Kind | Consensus timestamp | Message |
 |---|---|---|---|
-| 55 | `mandate_in` | 1788896686.215154514 | [messages/55](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/55) |
-| 56 | `payment_intake` | 1788896688.063134543 | [messages/56](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/56) |
-| 57 | `accepted` | 1788896689.910031846 | [messages/57](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/57) |
-| 58 | `delivered` | 1788896691.195188930 | [messages/58](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/58) |
-| 59 | `payment_balance` | 1788896695.415947127 | [messages/59](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/59) |
-| 60 | `receipt` | 1788896696.578850883 | [messages/60](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/60) |
+| 91 | `mandate_in` | 1788897265.132868791 | [messages/91](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/91) |
+| 92 | `payment_intake` | 1788897266.752988458 | [messages/92](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/92) |
+| 93 | `accepted` | 1788897268.858789104 | [messages/93](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/93) |
+| 94 | `delivered` | 1788897271.066457016 | [messages/94](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/94) |
+| 95 | `payment_balance` | 1788897275.195562104 | [messages/95](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/95) |
+| 96 | `receipt` | 1788897276.155559129 | [messages/96](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/96) |
 
 ## Verifying it yourself
 
@@ -220,10 +220,10 @@ These are the five checks, with the verdicts from the run above:
 | Check | What it establishes | Verdict |
 |---|---|---|
 | `receipt signature` | The receipt verifies against the key it carries, over its bytes as issued | PASS — signed by `99573eae7ac7…` |
-| `mandate hash linkage` | The receipt, the `mandate_in` anchor and the work-order file name the same fingerprint | PASS — `eeffbc4c…` in all three |
-| `anchor sequence` | All six anchors exist for this order, in the right order, ascending by consensus | PASS — #55 → #60 |
+| `mandate hash linkage` | The receipt, the `mandate_in` anchor and the work-order file name the same fingerprint | PASS — `472a38aa…` in all three |
+| `anchor sequence` | All six anchors exist for this order, in the right order, ascending by consensus | PASS — #91 → #96 |
 | `payments on ledger` | Both transfers are on chain with the stated payer, payee and amounts, and the fee payer is neither | PASS — 1 000 000 and 4 000 000 tinybars |
-| `receipt anchor` | The receipt's own hash is the one the topic recorded | PASS — `d119a1ab…` at #60 |
+| `receipt anchor` | The receipt's own hash is the one the topic recorded | PASS — `ddb1b0fa…` at #96 |
 
 The verifier talks to nobody but `https://testnet.mirrornode.hedera.com/api/v1`. It never calls the
 contractor or the customer, holds no keys, and cannot write anything.

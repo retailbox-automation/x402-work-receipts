@@ -1,11 +1,11 @@
 {
-  "started_at": "2026-09-08T19:44:42.551Z",
-  "finished_at": "2026-09-08T19:44:58.841Z",
+  "started_at": "2026-09-08T19:54:21.990Z",
+  "finished_at": "2026-09-08T19:54:40.290Z",
   "network": "hedera:testnet",
   "facilitator": "https://api.testnet.blocky402.com",
   "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1",
   "order": {
-    "mandate_id": "01a0828d-24af-7401-8935-fa73555a258a",
+    "mandate_id": "01a08295-fcca-725a-ad7e-fc9448cfa6be",
     "title": "Group trades by day and show the unread summary",
     "story_ref": "3f9e2a7c-1b4d-4e8f-9a6b-2c5d7e8f9a0b",
     "customer": "client-y-agent",
@@ -21,76 +21,76 @@
       "tinybars": 1000000,
       "payer": "0.0.10365982",
       "payee": "0.0.10365984",
-      "transaction_id": "0.0.7162784@1788896678.724313374",
-      "mirror_transaction_id": "0.0.7162784-1788896678-724313374",
-      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1788896678.724313374",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788896678-724313374"
+      "transaction_id": "0.0.7162784@1788897257.139657829",
+      "mirror_transaction_id": "0.0.7162784-1788897257-139657829",
+      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1788897257.139657829",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788897257-139657829"
     },
     "balance": {
       "tinybars": 4000000,
       "payer": "0.0.10365982",
       "payee": "0.0.10365984",
-      "transaction_id": "0.0.7162784@1788896685.277607763",
-      "mirror_transaction_id": "0.0.7162784-1788896685-277607763",
-      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1788896685.277607763",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788896685-277607763"
+      "transaction_id": "0.0.7162784@1788897269.019507994",
+      "mirror_transaction_id": "0.0.7162784-1788897269-019507994",
+      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1788897269.019507994",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788897269-019507994"
     }
   },
   "anchors": [
     {
       "kind": "mandate_in",
-      "seq": 55,
-      "consensus_ts": "1788896686.215154514",
-      "hash": "eeffbc4cbc7068c12bf13bbe7eb7345a6311269564c5199647baca035c87eac9",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/55"
+      "seq": 91,
+      "consensus_ts": "1788897265.132868791",
+      "hash": "472a38aa15b3f88db253b83169bf400492f6160cda71a21060d299b72787ba2b",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/91"
     },
     {
       "kind": "payment_intake",
-      "seq": 56,
-      "consensus_ts": "1788896688.063134543",
-      "hash": "e33a6a826d07c4485a04077d44c47f5b2908710ae75faf6c2c4f96ec44dfaaf9",
-      "ref": "0.0.7162784-1788896678-724313374",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/56"
+      "seq": 92,
+      "consensus_ts": "1788897266.752988458",
+      "hash": "c1740add784da348d6465110ff79abae95f25e04628122a0f25cf4bd6f6224e7",
+      "ref": "0.0.7162784-1788897257-139657829",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/92"
     },
     {
       "kind": "accepted",
-      "seq": 57,
-      "consensus_ts": "1788896689.910031846",
-      "hash": "1778d6985e199d8a71ada4b8d36e8e36deb9c791ed830f0af7a7230809b06a9f",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/57"
+      "seq": 93,
+      "consensus_ts": "1788897268.858789104",
+      "hash": "f07c36bb7cef8224206aad4f4f5b4d52533c019e6c559c7d1ecaee8ac88f09e0",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/93"
     },
     {
       "kind": "delivered",
-      "seq": 58,
-      "consensus_ts": "1788896691.195188930",
-      "hash": "2bc998fcbc39e32c526f926a59ed843a9d1e69d1ee6f5cb33f0fa48582cf3287",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/58"
+      "seq": 94,
+      "consensus_ts": "1788897271.066457016",
+      "hash": "408dc109873998cab248d7f8d2b043124b6f22cb38a9de97832980e38f90e423",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/94"
     },
     {
       "kind": "payment_balance",
-      "seq": 59,
-      "consensus_ts": "1788896695.415947127",
-      "hash": "77cc26edd77d2d6f4028a97e96f82e5b0dde93923c53164ba0072855653cc6c4",
-      "ref": "0.0.7162784-1788896685-277607763",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/59"
+      "seq": 95,
+      "consensus_ts": "1788897275.195562104",
+      "hash": "daf2e6a6fa29f472de28b80b22ac44a187736d05400a7470a5fd713dddc1449b",
+      "ref": "0.0.7162784-1788897269-019507994",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/95"
     },
     {
       "kind": "receipt",
-      "seq": 60,
-      "consensus_ts": "1788896696.578850883",
-      "hash": "d119a1abdab62911fc5c2860153dd8b4c4658634c67fd04d4375c8d0c008ece7",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/60"
+      "seq": 96,
+      "consensus_ts": "1788897276.155559129",
+      "hash": "ddb1b0fa3c4bb565e093787a70637a4c81ffe3650ec0f3ee17a9236c98fb97bb",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/96"
     }
   ],
   "deliverable": {
-    "pr_url": "https://git.example.com/agency-x/client-y-web/-/merge_requests/431",
-    "staging_url": "https://staging.example-client.app/preview/e2c34bf",
+    "pr_url": "https://git.example.com/agency-x/client-y-web/-/merge_requests/782",
+    "staging_url": "https://staging.example-client.app/preview/fab0e26",
     "notion_status": "Testing"
   },
   "artifacts": {
-    "mandate": "out/demo/2026-09-08T19-44-42/01a0828d-24af-7401-8935-fa73555a258a/mandate.json",
-    "accepted": "out/demo/2026-09-08T19-44-42/01a0828d-24af-7401-8935-fa73555a258a/accepted.json",
-    "receipt": "out/demo/2026-09-08T19-44-42/01a0828d-24af-7401-8935-fa73555a258a/receipt.json"
+    "mandate": "out/demo/2026-09-08T19-54-21/01a08295-fcca-725a-ad7e-fc9448cfa6be/mandate.json",
+    "accepted": "out/demo/2026-09-08T19-54-21/01a08295-fcca-725a-ad7e-fc9448cfa6be/accepted.json",
+    "receipt": "out/demo/2026-09-08T19-54-21/01a08295-fcca-725a-ad7e-fc9448cfa6be/receipt.json"
   },
   "verification": {
     "verdict": "PASS",
@@ -104,22 +104,22 @@
       {
         "name": "mandate hash linkage",
         "ok": true,
-        "detail": "eeffbc4cbc7068c12bf13bbe7eb7345a6311269564c5199647baca035c87eac9 — receipt, anchor #55 and the mandate file agree"
+        "detail": "472a38aa15b3f88db253b83169bf400492f6160cda71a21060d299b72787ba2b — receipt, anchor #91 and the mandate file agree"
       },
       {
         "name": "anchor sequence",
         "ok": true,
-        "detail": "mandate_in #55 → payment_intake #56 → accepted #57 → delivered #58 → payment_balance #59 → receipt #60"
+        "detail": "mandate_in #91 → payment_intake #92 → accepted #93 → delivered #94 → payment_balance #95 → receipt #96"
       },
       {
         "name": "payments on ledger",
         "ok": true,
-        "detail": "intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788896678-724313374); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788896685-277607763)"
+        "detail": "intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788897257-139657829); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788897269-019507994)"
       },
       {
         "name": "receipt anchor",
         "ok": true,
-        "detail": "d119a1abdab62911fc5c2860153dd8b4c4658634c67fd04d4375c8d0c008ece7 anchored at #60 (1788896696.578850883)"
+        "detail": "ddb1b0fa3c4bb565e093787a70637a4c81ffe3650ec0f3ee17a9236c98fb97bb anchored at #96 (1788897276.155559129)"
       }
     ]
   }
