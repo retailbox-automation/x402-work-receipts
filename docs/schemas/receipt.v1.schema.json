@@ -2,16 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://a2a.getaim.ai/schemas/receipt.v1.schema.json",
   "title": "receipt.v1",
-  "description": "Квитанция исполнителя заказчику. `kind=accepted` — сразу при приёме наряда; `kind=delivered` — по готовности, со ссылками на результат. Ссылается на заякоренный ВХОД: `mandate_envelope_hash` = sha256 канонизации (RFC 8785) конверта наряда как подписан (шифротекст + подпись), то есть поле `eh` записи `apmsg dir:'in'`.",
-  "$comment": "Источник и норматив: Retailbox A2A Bridge, docs/superpowers/specs/2026-09-04-a2a-pilot-mandate-receipt-design.md §3.2. Что доказывает цепочка — §4.2 там же: «запечатанный наряд с этим отпечатком существовал не позже консенсусной отметки и был принят подписью второй стороны»; содержимое, качество и факт исполнения НЕ доказываются. Денежных/часовых полей нет по решению 04.09; расширение payment (публичный профиль x402-work-receipts) — отдельной схемой через allOf, Bridge-пилот его не принимает.",
+  "description": "Квитанция исполнителя заказчику. `kind=accepted` — сразу при приёме наряда; `kind=delivered` — по готовности, со ссылками на результат; `kind=rejected` — формальный отказ приёмника: присланное не является наряд-форматом этой пары либо невалидно. Ссылается на заякоренный ВХОД: `mandate_envelope_hash` = sha256 канонизации (RFC 8785) конверта наряда как подписан (шифротекст + подпись), то есть поле `eh` записи `apmsg dir:'in'`.",
+  "$comment": "Источник и норматив: Retailbox A2A Bridge, docs/superpowers/specs/2026-09-04-a2a-pilot-mandate-receipt-design.md §3.2. Что доказывает цепочка — §4.2 там же: «запечатанный наряд с этим отпечатком существовал не позже консенсусной отметки и был принят подписью второй стороны»; содержимое, качество и факт исполнения НЕ доказываются. Денежных/часовых полей нет по решению 04.09; расширение payment (публичный профиль x402-work-receipts) — отдельной схемой через allOf, Bridge-пилот его не принимает. kind=rejected добавлен 07.09.2026: формальный отказ получателя на формат/невалидный наряд, замыкает цикл без людей; копия схемы в публичном репо x402-work-receipts обновляется отдельно с провенансом.",
   "type": "object",
   "unevaluatedProperties": false,
   "required": ["receipt_id", "kind", "mandate_id", "mandate_envelope_hash", "mandate_anchor", "taken", "issued_at", "issuer"],
   "properties": {
     "receipt_id": { "type": "string", "minLength": 1, "maxLength": 64, "description": "uuid7" },
-    "kind": { "enum": ["accepted", "delivered"] },
-    "mandate_id": { "type": "string", "minLength": 1, "maxLength": 64, "description": "из наряда" },
-    "mandate_envelope_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 hex канонизированного конверта наряда как подписан (= eh записи apmsg dir:'in')" },
+    "kind": { "enum": ["accepted", "delivered", "rejected"] },
+    "mandate_id": { "type": "string", "minLength": 1, "maxLength": 64, "description": "из наряда; для kind=rejected — msg_id отвергнутого сообщения" },
+    "mandate_envelope_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 hex канонизированного конверта наряда как подписан (= eh записи apmsg dir:'in'); для kind=rejected — отвергнутого сообщения" },
     "mandate_anchor": {
       "type": "object",
       "additionalProperties": false,
@@ -20,7 +20,8 @@
         "topic": { "type": "string", "pattern": "^0\\.0\\.[0-9]+$", "description": "HCS-топик, где лежит запись входа" },
         "seq": { "type": ["integer", "null"], "minimum": 1, "description": "sequence number; null, пока mirror не догнал" },
         "consensus_ts": { "type": ["string", "null"], "description": "консенсусная отметка времени (строка mirror `seconds.nanos` или ISO-8601); null, пока mirror не догнал" }
-      }
+      },
+      "description": "где лежит запись входа; для kind=rejected — запись отвергнутого сообщения"
     },
     "taken": { "type": "array", "maxItems": 50, "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "description": "что принято к исполнению (критерии, которые исполнитель подтверждает)" },
     "declined": {
@@ -38,11 +39,20 @@
       },
       "description": "обязателен при kind=delivered"
     },
+    "reason": { "type": "string", "minLength": 1, "maxLength": 500, "description": "только при kind=rejected: почему присланное не принято (человекочитаемо, без содержимого наряда)" },
+    "expected_schema": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$", "description": "только при kind=rejected: тег формата, который приёмник принимает (mandate.v1)" },
+    "schema_url": { "type": "string", "format": "uri", "pattern": "^https://", "maxLength": 2048, "description": "только при kind=rejected: где лежит норматив ожидаемого формата" },
+    "hint": { "type": "string", "minLength": 1, "maxLength": 500, "description": "только при kind=rejected: чем отправить наряд правильно (инструмент/команда)" },
     "issued_at": { "type": "string", "format": "date-time" },
     "issuer": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,31}$", "description": "handle исполнителя" }
   },
   "allOf": [
     { "if": { "properties": { "kind": { "const": "delivered" } } }, "then": { "required": ["result"] } },
-    { "if": { "properties": { "kind": { "const": "accepted" } } }, "then": { "properties": { "taken": { "minItems": 1 } } } }
+    { "if": { "properties": { "kind": { "const": "accepted" } } }, "then": { "properties": { "taken": { "minItems": 1 }, "result": false } } },
+    { "if": { "required": ["kind"], "properties": { "kind": { "const": "rejected" } } },
+      "then": { "required": ["reason", "expected_schema", "schema_url"],
+                "properties": { "taken": { "maxItems": 0 }, "result": false } } },
+    { "if": { "required": ["kind"], "properties": { "kind": { "enum": ["accepted", "delivered"] } } },
+      "then": { "properties": { "reason": false, "expected_schema": false, "schema_url": false, "hint": false } } }
   ]
 }

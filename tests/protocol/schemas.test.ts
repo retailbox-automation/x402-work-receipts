@@ -78,6 +78,29 @@ describe("receipt rules", () => {
     expect(() => validateReceipt({ ...accepted(), taken: [] })).toThrow(SchemaError);
   });
 
+  it("validates a kind rejected receipt and requires its refusal fields", () => {
+    // Added by the 2026-09-07 revision of the source schema: a formal refusal
+    // of a message that is not a work order for this pair.
+    const { result: _result, ...base } = accepted();
+    const refusal = {
+      ...base,
+      kind: "rejected",
+      taken: [],
+      reason: "The message is not a work order in the format this receiver accepts",
+      expected_schema: "mandate.v1",
+      schema_url: "https://a2a.getaim.ai/schemas/mandate.v1.schema.json",
+    };
+    expect(() => validateReceipt(refusal)).not.toThrow();
+    const { reason: _reason, ...withoutReason } = refusal;
+    expect(() => validateReceipt(withoutReason)).toThrow(/reason/);
+  });
+
+  it("confines the refusal fields to kind rejected and result to kind delivered", () => {
+    expect(() => validateReceipt({ ...accepted(), reason: "no" })).toThrow(/reason/);
+    const withResult = { ...accepted(), result: { pr_url: "https://example.test/pr/1", staging_url: "https://example.test/s", notion_status: "Done" } };
+    expect(() => validateReceipt(withResult)).toThrow(/result/);
+  });
+
   it("accepts an anchor the mirror node has not caught up with yet", () => {
     const pending = { ...accepted(), mandate_anchor: { topic: "0.0.10366000", seq: null, consensus_ts: null } };
     expect(() => validateReceipt(pending)).not.toThrow();

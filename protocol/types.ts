@@ -64,16 +64,34 @@ export type DeclinedCriterion = {
   reason: string;
 };
 
-/** Contractor receipt for one mandate (`receipt.v1`). */
+/**
+ * Contractor receipt for one mandate (`receipt.v1`).
+ *
+ * `accepted` is issued on intake, `delivered` on completion, and `rejected`
+ * when what arrived is not a work order this pair accepts at all — a formal
+ * refusal that closes the exchange without a human. The `reason`,
+ * `expected_schema`, `schema_url` and `hint` fields belong to `rejected` only;
+ * the schema forbids them on the other two kinds, and forbids `result` on
+ * anything but `delivered`.
+ */
 export type Receipt = {
   receipt_id: string;
-  kind: "accepted" | "delivered";
+  kind: "accepted" | "delivered" | "rejected";
+  /** From the mandate; for `rejected`, the id of the refused message. */
   mandate_id: string;
   mandate_envelope_hash: string;
   mandate_anchor: Anchor;
   taken: string[];
   declined?: DeclinedCriterion[];
   result?: ReceiptResult;
+  /** `rejected` only: why the message was not accepted, without quoting it. */
+  reason?: string;
+  /** `rejected` only: the format tag the receiver does accept. */
+  expected_schema?: string;
+  /** `rejected` only: where that format is specified. */
+  schema_url?: string;
+  /** `rejected` only: how to send the order correctly. */
+  hint?: string;
   issued_at: string;
   issuer: string;
 };
