@@ -393,3 +393,45 @@ describe("GET /mandates/:id/receipt", () => {
     expect((await collect("wo-never-seen")).status).toBe(404);
   });
 });
+
+describe("what the service blames the caller for", () => {
+  it("answers 400 when the body parser cannot read the request", async () => {
+    const response = await fetch(`${baseUrl}/mandates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "PAYMENT-SIGNATURE": "intake" },
+      body: "{ this is not json",
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("answers 500, not 400, when the service itself throws", async () => {
+    // A TypeError inside a handler is a bug in this service. Reporting it as a
+    // 400 would tell a customer who paid and sent a perfectly good order that
+    // their request was malformed, and send them off to fix nothing.
+    const brokenApp = createContractorApp({
+      config: CONFIG,
+      store: JobStore.open(join(dir, "broken.json")),
+      anchors: anchors.write,
+      settlements: {
+        claim: () => {
+          throw new TypeError("undefined is not an object");
+        },
+      },
+      paymentGate: (_req, _res, next) => next(),
+    });
+    const brokenServer = brokenApp.listen(0);
+    await new Promise<void>(resolve => brokenServer.once("listening", () => resolve()));
+    const port = (brokenServer.address() as AddressInfo).port;
+
+    const response = await fetch(`http://127.0.0.1:${port}/mandates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mandateEnvelope()),
+    });
+    await new Promise<void>(resolve => brokenServer.close(() => resolve()));
+
+    expect(response.status).toBe(500);
+    expect(((await response.json()) as { error: string }).error).toBe("Internal Server Error");
+  });
+});
