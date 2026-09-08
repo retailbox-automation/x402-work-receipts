@@ -478,8 +478,9 @@ function reportPayment(leg: "intake" | "balance", result: { transactionId?: stri
     console.log(`\n${leg}: already paid for earlier, the contractor charged nothing this time`);
     return;
   }
-  console.log(`\n${leg} paid: ${result.transactionId}`);
-  console.log(`hashscan:     ${result.hashscanUrl}`);
+  const label = `${leg} paid:`.padEnd(14);
+  console.log(`\n${label}${result.transactionId}`);
+  console.log(`${"hashscan:".padEnd(14)}${result.hashscanUrl}`);
 }
 
 /**
