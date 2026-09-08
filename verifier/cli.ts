@@ -83,12 +83,19 @@ export async function verify(
   deps: VerifyDeps = liveDeps,
 ): Promise<VerifyOutcome> {
   let receipt: Envelope<PaymentReceipt>;
-  let mandate: Envelope<Mandate> | undefined;
   try {
     receipt = loadReceipt(request.receiptPath);
-    mandate = request.mandatePath ? loadMandate(request.mandatePath) : undefined;
   } catch (error) {
     return errorOutcome(`Could not read the receipt: ${describe(error)}`);
+  }
+
+  // Kept apart from the receipt so a bad work-order file is not reported as a
+  // bad receipt: the two are supplied separately and fail for different reasons.
+  let mandate: Envelope<Mandate> | undefined;
+  try {
+    mandate = request.mandatePath ? loadMandate(request.mandatePath) : undefined;
+  } catch (error) {
+    return errorOutcome(`Could not read the work order: ${describe(error)}`);
   }
 
   let anchors;

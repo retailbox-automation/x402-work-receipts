@@ -190,6 +190,19 @@ describe("when the check cannot be completed", () => {
     expect(result.code).toBe(EXIT_ERROR);
   });
 
+  it("names the work order, not the receipt, when the mandate file is wrong", async () => {
+    const result = await verify(
+      {
+        topicId: GOLDEN_TOPIC,
+        receiptPath: path("./golden/receipt.json"),
+        mandatePath: path("./golden/receipt.json"),
+      },
+      offlineDeps(),
+    );
+    expect(result.code).toBe(EXIT_ERROR);
+    expect(result.output).toMatch(/work order/i);
+  });
+
   it("exits 2 when the receipt is not a signed receipt envelope", async () => {
     const result = await verify(
       { topicId: GOLDEN_TOPIC, receiptPath: path("./golden/mandate.json") },
