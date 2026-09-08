@@ -12,5 +12,5 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["protocol/**/*.ts", "anchor/**/*.ts", "tests/**/*.ts", "spike/**/*.ts"]
+  "include": ["protocol/**/*.ts", "anchor/**/*.ts", "customer/**/*.ts", "tests/**/*.ts", "spike/**/*.ts"]
 }
