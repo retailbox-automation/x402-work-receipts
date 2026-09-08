@@ -12,10 +12,17 @@
 
 `mandate.v1.schema.json` and `receipt.v1.schema.json` are byte-identical copies of the source protocol; only `payment.v1.schema.json` is written here, and only by `build_payment_profile.py`.
 
-| Copied file | Source path in the protocol repository | Source commit | Copied on |
-|---|---|---|---|
-| `mandate.v1.schema.json` | `docs/schemas/mandate.v1.schema.json` | `0885247` (2026-09-04) | 2026-09-04 |
-| `receipt.v1.schema.json` | `docs/schemas/receipt.v1.schema.json` | `56e8075` (2026-09-07) | 2026-09-08 |
+| Copied file | Source path in the protocol repository | Source commit | Copied on | sha256 of the copy |
+|---|---|---|---|---|
+| `mandate.v1.schema.json` | `docs/schemas/mandate.v1.schema.json` | `0885247` (2026-09-04) | 2026-09-04 | `dae0c1e164faa43983cfde58e0ba2388509a5dd706690554a69a17de96e90846` |
+| `receipt.v1.schema.json` | `docs/schemas/receipt.v1.schema.json` | `56e8075` (2026-09-07) | 2026-09-08 | `412162943af594c6f533a5f9822774bf7a2d545d5b7a1d5172adb565cfc4badf` |
+
+The digests are not decoration: `tests/schemas/drift.test.ts` reads them out of this table and compares
+them with the files, so a copy that is edited in place — by a careless merge, a formatter, or a hand
+that meant well — fails the suite instead of quietly becoming a different protocol. Changing a schema
+therefore means copying it, re-running `build_payment_profile.py`, and updating the digest here in the
+same commit. The same test regenerates `payment.v1.schema.json` in a scratch directory and requires it
+to match the committed file byte for byte.
 
 The 2026-09-07 revision adds `kind: rejected` — a formal refusal of a message that is not a valid work order for this pair — with `reason`, `expected_schema`, `schema_url` and `hint`, and tightens the conditional rules so `result` is confined to `kind: delivered` and the rejection fields to `kind: rejected`. Refresh procedure: copy the file, re-run `python3 docs/schemas/build_payment_profile.py`, add a row above, run `npm test`.
 

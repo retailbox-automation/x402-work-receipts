@@ -561,6 +561,12 @@ function handler(route: (req: Request, res: Response) => Promise<void> | void): 
  * could not be put on the public log, and a receipt that is not anchored cannot
  * be proven later — so none is issued.
  *
+ * Only two things are the caller's fault: a document that does not validate,
+ * and a request the body parser could not read. Everything else — a `TypeError`
+ * above all, which in this service means a bug rather than a bad request — is a
+ * 500, logged. Telling a paying customer "400, your fault" for our own mistake
+ * would send them off to fix a request that was never wrong.
+ *
  * @param error - The error
  * @param _req - The request
  * @param res - The response
@@ -575,12 +581,37 @@ function errors(error: unknown, _req: Request, res: Response, _next: express.Nex
     res.status(502).json({ error: error.message });
     return;
   }
-  if (error instanceof TypeError || error instanceof SyntaxError || error instanceof SchemaError) {
+  if (error instanceof SchemaError) {
     res.status(400).json({ error: error.message });
+    return;
+  }
+  const status = clientErrorStatus(error);
+  if (status !== undefined) {
+    res.status(status).json({ error: error instanceof Error ? error.message : "Bad Request" });
     return;
   }
   console.error(error);
   res.status(500).json({ error: "Internal Server Error" });
+}
+
+/**
+ * The status of an error that already knows it is the caller's fault.
+ *
+ * Express's body parser rejects unreadable or oversized bodies with
+ * `http-errors` objects, which carry a 4xx `status` and `expose: true` — the
+ * flag meaning the message is safe to show the caller. Nothing else in this
+ * service sets those, so nothing else can accidentally claim to be a 400.
+ *
+ * @param error - The thrown value
+ * @returns The status to answer with, or undefined when this is not a client error
+ */
+function clientErrorStatus(error: unknown): number | undefined {
+  const candidate = error as { status?: unknown; statusCode?: unknown; expose?: unknown } | null;
+  if (!candidate || candidate.expose !== true) {
+    return undefined;
+  }
+  const status = typeof candidate.status === "number" ? candidate.status : candidate.statusCode;
+  return typeof status === "number" && status >= 400 && status < 500 ? status : undefined;
 }
 
 /**

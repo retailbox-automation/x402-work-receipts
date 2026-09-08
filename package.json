@@ -8,13 +8,15 @@
   "scripts": {
     "test": "vitest run",
     "test:unit": "vitest run --exclude '**/*.integration.test.ts'",
+    "typecheck": "tsc --noEmit",
     "spike:accounts": "tsx spike/create-accounts.ts",
     "spike:server": "tsx spike/server.ts",
     "spike:client": "tsx spike/client.ts",
     "anchor:create-topic": "tsx anchor/topic.ts",
     "contractor:start": "tsx contractor/server.ts",
     "customer": "tsx customer/cli.ts",
-    "verify": "tsx verifier/cli.ts"
+    "verify": "tsx verifier/cli.ts",
+    "demo": "tsx demo/run-e2e.ts"
   },
   "dependencies": {
     "@hiero-ledger/sdk": "2.85.0",
