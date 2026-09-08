@@ -59,7 +59,7 @@ recompute the hash and look the transfer up independently. The helper is `paymen
 | `HEDERA_OPERATOR_ID`, `HEDERA_OPERATOR_KEY`, `HEDERA_OPERATOR_KEY_TYPE` | Pays for the HCS messages |
 | `CONTRACTOR_ACCOUNT_ID` | Hedera account that receives payments; falls back to `RECEIVER_ACCOUNT_ID` from the spike. Must be a real `0.0.x` account — the facilitator rejects aliases |
 
-Optional: `CONTRACTOR_HANDLE` (default `agency-x`), `CONTRACTOR_PORT` (4021), `CONTRACTOR_STORE`
+Optional: `CONTRACTOR_HANDLE` (default `agency-x-agent`), `CONTRACTOR_PORT` (4021), `CONTRACTOR_STORE`
 (`out/contractor/jobs.json`), `INTAKE_TINYBARS`, `BALANCE_TINYBARS`, `X402_FACILITATOR_URL`
 (`https://api.testnet.blocky402.com`), `X402_NETWORK` (`hedera:testnet`), `X402_ASSET` (`0.0.0` = HBAR).
 

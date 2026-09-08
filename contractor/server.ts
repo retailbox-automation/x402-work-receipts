@@ -531,7 +531,9 @@ export function contractorConfigFromEnv(): ContractorConfig {
     facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://api.testnet.blocky402.com",
     intakeTinybars: readNumber("INTAKE_TINYBARS", DEFAULT_INTAKE_TINYBARS),
     balanceTinybars: readNumber("BALANCE_TINYBARS", DEFAULT_BALANCE_TINYBARS),
-    handle: process.env.CONTRACTOR_HANDLE ?? "agency-x",
+    // Matches the customer agent's default counterparty, so the two halves of
+    // the demo address each other without either side setting a variable.
+    handle: process.env.CONTRACTOR_HANDLE ?? "agency-x-agent",
     signingKeyHex: requireEnv("CONTRACTOR_SIGNING_KEY"),
     deliverToken: requireEnv("CONTRACTOR_DELIVER_TOKEN"),
     port: readNumber("CONTRACTOR_PORT", 4021),
