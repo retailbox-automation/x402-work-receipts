@@ -32,6 +32,9 @@ account that spends money.
 npm install
 npm run anchor:create-topic      # once — prints the ANCHOR_TOPIC_ID to put in .env
 npm run demo                     # the whole flow on testnet, then the verifier
+
+npm test                         # every suite; the testnet ones skip when .env is absent
+npm run typecheck                # tsc --noEmit over every module
 ```
 
 **Required**
