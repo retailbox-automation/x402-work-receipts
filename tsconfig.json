@@ -18,6 +18,7 @@
     "contractor/**/*.ts",
     "customer/**/*.ts",
     "verifier/**/*.ts",
+    "demo/**/*.ts",
     "tests/**/*.ts",
     "spike/**/*.ts"
   ]

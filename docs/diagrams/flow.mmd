@@ -1,0 +1,36 @@
+%% One work order, end to end: signed, paid, anchored, and verified by a stranger.
+%% Rendered in README.md; regenerate nothing — this file is the source.
+sequenceDiagram
+    autonumber
+    participant C as Customer agent
+    participant K as Contractor service
+    participant F as Blocky402 facilitator
+    participant H as Hedera ledger and HCS topic
+    participant M as Public mirror node
+    participant V as Verifier — anyone
+
+    C->>C: build mandate.v1 from a story card, sign it
+    C->>K: POST /mandates
+    K-->>C: 402 — price, payee, facilitator fee payer
+    C->>F: signed HBAR transfer (intake)
+    Note over K,F: upfront flow: the money settles before the handler runs,<br/>so the receipt can name the payment that bought it
+    F->>H: submit transfer
+    H-->>F: SUCCESS + transaction id
+    F-->>K: settled transaction id
+    K->>H: anchor mandate_in, payment_intake, accepted
+    K-->>C: 201 — signed receipt.v1, kind accepted
+
+    K->>K: do the work
+    K->>H: anchor delivered
+
+    C->>K: GET /mandates/{id}/receipt
+    K-->>C: 402 — balance price
+    C->>F: signed HBAR transfer (balance)
+    F->>H: submit transfer
+    F-->>K: settled transaction id
+    K->>H: anchor payment_balance, receipt
+    K-->>C: 200 — signed receipt.v1+payment.v1, kind delivered
+
+    V->>M: topic messages + both transactions
+    M-->>V: anchors, transfers
+    V->>V: signature · hash linkage · anchor order · payments · receipt anchor
