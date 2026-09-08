@@ -321,8 +321,7 @@ export async function runOrder(options: {
   const accepted = parseAcceptedResponse(result.body, envelope);
   const paths = saveOrderArtifacts(outDir, envelope, accepted);
 
-  console.log(`\nintake paid: ${result.transactionId}`);
-  console.log(`hashscan:    ${result.hashscanUrl}`);
+  reportPayment("intake", result);
   reportAnchor(accepted.data.mandate_anchor.topic, config);
   console.log(`\naccepted by ${accepted.data.issuer}, ${accepted.data.taken.length} criteria taken`);
   for (const criterion of accepted.data.taken) {
@@ -357,14 +356,20 @@ export async function runCollect(
   console.log("\npaying the balance…");
 
   const paid = createPaidFetch(config.payment);
-  const result = await payFor<unknown>(paid, `${base}/mandates/${mandateId}/receipt`, { method: "GET" });
+  // The contractor releases a receipt it has already been paid for without a
+  // second 402, so a repeated collection must not be read as a failed payment.
+  const result = await payFor<unknown>(
+    paid,
+    `${base}/mandates/${mandateId}/receipt`,
+    { method: "GET" },
+    { allowUnpaid: true },
+  );
 
   const receiptEnvelope = parseDeliveredResponse(result.body, mandateId);
   const receipt = receiptEnvelope.data;
   const path = saveReceiptArtifact(outDir, mandateId, receiptEnvelope);
 
-  console.log(`\nbalance paid: ${result.transactionId}`);
-  console.log(`hashscan:     ${result.hashscanUrl}`);
+  reportPayment("balance", result);
   console.log(`\npayments on this order:`);
   console.log(`  intake  ${receipt.payment.intake.tinybars} tinybars  ${receipt.payment.intake.transaction_id}`);
   console.log(`          ${hashscanTransactionUrl(receipt.payment.intake.transaction_id, config.payment.network)}`);
@@ -460,6 +465,21 @@ function takeReceipt(body: unknown): Envelope<unknown> {
     throw new Error("The receipt signature does not verify — refusing to store it");
   }
   return envelope as Envelope<unknown>;
+}
+
+/**
+ * Prints what was paid for this call, or says that nothing was.
+ *
+ * @param leg - Which payment this was
+ * @param result - What the paid fetch returned
+ */
+function reportPayment(leg: "intake" | "balance", result: { transactionId?: string; hashscanUrl?: string }): void {
+  if (!result.transactionId) {
+    console.log(`\n${leg}: already paid for earlier, the contractor charged nothing this time`);
+    return;
+  }
+  console.log(`\n${leg} paid: ${result.transactionId}`);
+  console.log(`hashscan:     ${result.hashscanUrl}`);
 }
 
 /**

@@ -35,18 +35,30 @@ export type PaidFetch = {
   payment: PaymentIdentity;
 };
 
-/** A resource served after a payment settled. */
+/** A resource served after a payment settled, or served without asking for one. */
 export type PaidResult<T> = {
   status: number;
   body: T;
-  /** Settlement as reported by the facilitator. */
-  settlement: SettleResponse;
+  /** Settlement as reported by the facilitator; absent when nothing had to be paid. */
+  settlement?: SettleResponse;
   /** Transaction id in the facilitator's form, `0.0.x@sec.nanos`. */
-  transactionId: string;
+  transactionId?: string;
   /** The same transaction as the mirror node addresses it, `0.0.x-sec-nanos`. */
-  mirrorTransactionId: string;
+  mirrorTransactionId?: string;
   /** Deep link to the transaction on the public explorer. */
-  hashscanUrl: string;
+  hashscanUrl?: string;
+};
+
+/** Options for {@link payFor}. */
+export type PayForOptions = {
+  /**
+   * Accept a success answer that asked for no payment.
+   *
+   * The contractor is idempotent: a receipt that has already been paid for and
+   * issued comes back as a plain 200, with no 402 and no second charge. Without
+   * this the client would treat its own successful second call as a failure.
+   */
+  allowUnpaid?: boolean;
 };
 
 /** The resource answered with an error status and no payment was settled. */
@@ -135,7 +147,8 @@ export function createPaidFetch(payment: PaymentIdentity): PaidFetch {
  * @param paid - The paying fetch
  * @param url - Resource to call
  * @param init - Request options, as for `fetch`
- * @returns The served body and the settled transaction
+ * @param options - Whether an answer that needed no payment is acceptable
+ * @returns The served body and the settled transaction, when there was one
  * @throws ResourceRequestError when the resource answered an error status
  * @throws PaymentNotSettledError when the payment was refused or failed
  */
@@ -143,6 +156,7 @@ export async function payFor<T>(
   paid: PaidFetch,
   url: string,
   init?: RequestInit,
+  options?: PayForOptions,
 ): Promise<PaidResult<T>> {
   let response: Response;
   try {
@@ -178,6 +192,10 @@ export async function payFor<T>(
   }
 
   if (parsed.paymentStatus !== "settled") {
+    if (parsed.paymentStatus === "none" && options?.allowUnpaid) {
+      // Served without a price attached — the caller already owns this resource.
+      return { status: parsed.status, body: parsed.body as T };
+    }
     throw new PaymentNotSettledError(`${url} served a body without settling a payment`, parsed.header);
   }
 

@@ -170,4 +170,29 @@ describe("paying a priced route", () => {
     expect(error).toBeInstanceOf(ResourceRequestError);
     expect((error as ResourceRequestError).status).toBe(409);
   }, 30_000);
+
+  it("takes a receipt the contractor releases for free, having already been paid", async () => {
+    const resource = await startResource({ unpaidStatus: 200 });
+    const paid = createPaidFetch(identity());
+
+    const result = await payFor<{ error: string }>(
+      paid,
+      resource.url,
+      { method: "GET" },
+      { allowUnpaid: true },
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.transactionId).toBeUndefined();
+    expect(resource.payments).toHaveLength(0);
+  }, 30_000);
+
+  it("still refuses a free body when the caller expects to be paying for it", async () => {
+    const resource = await startResource({ unpaidStatus: 200 });
+    const paid = createPaidFetch(identity());
+
+    await expect(payFor(paid, resource.url, { method: "GET" })).rejects.toBeInstanceOf(
+      PaymentNotSettledError,
+    );
+  }, 30_000);
 });
