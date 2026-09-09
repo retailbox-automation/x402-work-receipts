@@ -27,6 +27,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import { config as loadEnv } from "dotenv";
+import rateLimit from "express-rate-limit";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import type { SettleResultContext } from "@x402/core/server";
@@ -119,6 +120,12 @@ export const DEFAULT_BALANCE_TINYBARS = 4_000_000;
 
 /** How long a recorded settlement stays claimable. */
 const SETTLEMENT_TTL_MS = 10 * 60 * 1000;
+
+/** Window the delivery route's per-IP rate limit counts within. */
+export const DELIVER_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+/** Delivery calls one IP may make inside that window. */
+export const DELIVER_RATE_LIMIT_MAX = 20;
 
 /** An anchor could not be written, so nothing may be issued that references it. */
 class AnchorFailure extends Error {
@@ -213,6 +220,28 @@ export function agentCard(config: ContractorConfig): Record<string, unknown> {
 }
 
 /**
+ * The per-IP rate limit for the delivery route.
+ *
+ * That route is the one public thing guarded by a static secret rather than by
+ * a payment, so it is the one an outsider can hammer for free: every other
+ * write costs HBAR before the handler runs. The limit does not replace the
+ * token — it takes guessing it off the table, and it is mounted ahead of the
+ * token check so a wrong token is counted too.
+ *
+ * @returns The middleware, counting {@link DELIVER_RATE_LIMIT_MAX} calls per
+ *   {@link DELIVER_RATE_LIMIT_WINDOW_MS}
+ */
+export function deliverRateLimit(): RequestHandler {
+  return rateLimit({
+    windowMs: DELIVER_RATE_LIMIT_WINDOW_MS,
+    limit: DELIVER_RATE_LIMIT_MAX,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many delivery calls from this address; try again later" },
+  });
+}
+
+/**
  * Builds the Express application.
  *
  * @param deps - Configuration and collaborators
@@ -225,6 +254,15 @@ export function createContractorApp(deps: ContractorDeps): Express {
   // and the card it publishes must never be able to name different agents.
   const agent = contractorUaid(config);
   const app = express();
+  // The hosted contractor sits behind Zeabur's TLS proxy, which terminates
+  // https and forwards plain http. Without this, `req.protocol` is whatever
+  // reached the container — and `@x402/express` builds the quote's
+  // `resource.url` from it, so the 402 advertised an http:// url for a service
+  // that only answers over https. One hop is trusted, not any number of them:
+  // that is the proxy in front, and nothing a caller can add on top of it.
+  app.set("trust proxy", 1);
+  // Nothing gains from telling the world which framework serves the receipts.
+  app.disable("x-powered-by");
   app.use(express.json({ limit: "256kb" }));
 
   /**
@@ -279,6 +317,7 @@ export function createContractorApp(deps: ContractorDeps): Express {
   // does not pay itself to record its own work.
   app.post(
     "/mandates/:id/deliver",
+    deliverRateLimit(),
     handler(async (req, res) => {
       if (!tokenMatches(req.header("x-contractor-token"), config.deliverToken)) {
         res.status(401).json({ error: "Invalid or missing X-Contractor-Token" });

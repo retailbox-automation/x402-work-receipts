@@ -22,6 +22,15 @@ too. There is no mainnet key on that machine. The [verifier](../../verifier) is 
 it holds no keys and reads only the public mirror node, so a stranger checks the same receipt without
 trusting this host at all.
 
+**Two things the container does that a laptop does not need.** Zeabur terminates TLS and forwards
+plain http, so the service trusts one proxy hop (`app.set("trust proxy", 1)`) — without it the quote in
+the `402` advertised `http://x402-work-receipts.zeabur.app/...` for a host that answers only over
+https, and a customer agent that took the advertised url at its word would have been sent to the wrong
+scheme. And `POST /mandates/{id}/deliver`, the one route guarded by a static token rather than by a
+payment, is rate-limited per address — 20 calls per 10 minutes, counted before the token is checked, so
+guessing it is not free. Everything else costs HBAR before the handler runs, which is its own limit.
+The service also stops naming Express in its response headers.
+
 ## A real run against it
 
 Order `01a086c8-8c74-773e-b95a-75574aa4128e`, 2026-09-09, placed from a laptop against the url above,
