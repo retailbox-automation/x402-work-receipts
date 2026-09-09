@@ -153,6 +153,7 @@ describe("an order with no retainer", () => {
       transactions: goldenTransactions(),
     });
     expect(result.ok).toBe(true);
+    expect(result.applicable).toBe(false);
     expect(result.detail).toMatch(/not applicable/);
   });
 

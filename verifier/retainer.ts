@@ -1,11 +1,11 @@
 /**
- * The optional sixth check: was a retainer really held on the ledger, and did
+ * The optional last check: was a retainer really held on the ledger, and did
  * the contractor only release it after delivering?
  *
  * Most orders in this protocol have no retainer, so this check is optional by
  * construction: an order whose topic carries no `retainer_*` anchor is not
- * failed, it is reported as not applicable. The five required checks are
- * untouched, and `EXPECTED_STEPS` still describes the same six anchors.
+ * failed, it is reported as not applicable. The required checks are untouched,
+ * and `EXPECTED_STEPS` still describes the same six anchors.
  *
  * When a retainer *is* anchored, the check is strict, because the anchors alone
  * are a claim. It reads the schedule entity and the transfer it executed from
@@ -24,7 +24,7 @@ import { type RetainerFacts, retainerAnchorHash } from "../retainer/records.js";
 import type { CheckResult, VerificationInput } from "./checks.js";
 import type { MirrorSchedule, MirrorTransaction } from "./mirror.js";
 
-/** Check 6: the retainer, when the order has one. */
+/** Check 7: the retainer, when the order has one. */
 export const CHECK_RETAINER = "retainer on ledger";
 
 /** What the mirror node said about the retainer this order anchored. */
@@ -85,6 +85,7 @@ export function checkRetainer(input: VerificationInput, anchors: AnchorEntry[]):
     return {
       name: CHECK_RETAINER,
       ok: true,
+      applicable: false,
       detail: "not applicable — this order carries no retainer anchors",
     };
   }
