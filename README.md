@@ -175,6 +175,21 @@ An intake that is paid for but is not a valid signed `mandate.v1` gets `422` wit
 `receipt.v1`, `kind: rejected`, naming the expected schema and its url. Nothing is anchored for a
 refusal; the transfer is on the ledger and the response carries its transaction id.
 
+## Extras
+
+Three pieces shipped after the base flow verified end to end, each behind its own doc and its own
+verifier check or tool. Nothing below is planned — every line names something on `main`, with tests.
+
+| Extra | What it adds | Run it | Verifier check | Doc |
+|---|---|---|---|---|
+| **Agent identity** | Both agents sign as an HCS-14 `uaid:did:z6Mk…` — their Ed25519 public key in another encoding — instead of only a handle; the contractor publishes its card at `GET /.well-known/agent.json` | `npm run contractor:start`, then `curl localhost:4021/.well-known/agent.json` | `agent identity` (check 2) — decodes the identifier and compares it with the key that signed, offline | [`docs/extras/identity.md`](docs/extras/identity.md) |
+| **Retainer** | A Hedera Scheduled Transaction the customer authorises up front and the contractor releases after delivering — public from the start, nothing moves until release, and the customer keeps the balance if the schedule expires unreleased | `npm run retainer -- create/release/status` | `retainer on ledger` (check 7) — `N/A` for any order with none, strict once one is anchored | [`docs/extras/retainer.md`](docs/extras/retainer.md) |
+| **MCP server** | The same flow — `order`, `collect`, `verify` — as three [Model Context Protocol](https://modelcontextprotocol.io) tools over stdio, so any MCP-speaking agent runtime can drive it without shelling out to the CLIs | `npm run mcp` | none of its own — `verify` runs the same seven checks as the CLI | [`docs/extras/mcp.md`](docs/extras/mcp.md) |
+
+Each is additive: an order with no identifier, no retainer or no MCP client still produces the same
+six anchors and the same signed receipts, and the checks it does not trigger report `N/A`, not `PASS`
+or `FAIL` — see [Verifying it yourself](#verifying-it-yourself) below.
+
 ## What it proves, and what it does not
 
 Verbatim from [`docs/schemas/README.md`](docs/schemas/README.md), which took the wording from the source
@@ -289,14 +304,19 @@ window, which opened 2026-09-04 12:00 EDT. The commit history starts there.
 
 ## Roadmap
 
-Shipped since the first end-to-end run: agent identity via HCS-14 `uaid`, resolved by the verifier
-([`docs/extras/identity.md`](docs/extras/identity.md)); a Scheduled Transaction retainer the customer
-authorises up front and the contractor releases after delivering, checked against the ledger
-([`docs/extras/retainer.md`](docs/extras/retainer.md)); and an MCP server exposing `order`, `collect`
-and `verify` as tools, so the flow is reachable from any agent runtime rather than only from this CLI
-([`docs/extras/mcp.md`](docs/extras/mcp.md)).
+What the extras above do not cover, in order of how soon each is coming:
 
-Nearest: a custom fee on the anchor topic (HIP-991) so the audit trail funds itself.
+- **A hosted contractor, not only `localhost:4021`.** The demo and the run recorded in this README are
+  against a locally started service; a Zeabur deployment with an uptime watcher through the judging
+  period is planned but not yet live. The facilitator never needs to reach the contractor directly — the
+  customer carries the signed payload to it — so this is a submission and usability gap, not a protocol
+  one.
+- **A contribution to `hedera-dev/hedera-harness`** — a deterministic mirror-node check for its `CHAIN`
+  step, as a PR against the `dev` branch. Scoped, not started; separate repository, separate prize
+  category from the flow above.
+- **A custom fee on the anchor topic (HIP-991)**, so a shared audit register could fund its own
+  operation. Timeboxed as an experiment, not committed: it changes the topic's submit path, and whether
+  `submitAnchor` still works through it is genuinely unverified.
 
 Where it goes: agencies and their clients already exchange work orders and sign-offs — in trackers, in
 chat, in invoices — and already argue about what was agreed. The pieces that make this saleable are not
