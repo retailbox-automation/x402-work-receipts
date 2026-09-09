@@ -633,7 +633,10 @@ export function contractorConfigFromEnv(): ContractorConfig {
     ...(process.env.CONTRACTOR_UAID?.trim() ? { uaid: process.env.CONTRACTOR_UAID.trim() } : {}),
     signingKeyHex: requireEnv("CONTRACTOR_SIGNING_KEY"),
     deliverToken: requireEnv("CONTRACTOR_DELIVER_TOKEN"),
-    port: readNumber("CONTRACTOR_PORT", 4021),
+    // `PORT` is what a platform injects (Zeabur does); `CONTRACTOR_PORT` is the
+    // local knob and wins when both are set, so a hosted default can never
+    // silently override a port someone asked for by name.
+    port: readNumber("CONTRACTOR_PORT", readNumber("PORT", 4021)),
   };
 }
 
