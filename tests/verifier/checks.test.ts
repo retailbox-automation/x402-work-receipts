@@ -1,5 +1,5 @@
 /**
- * The five checks, exercised against one real testnet run and against precise
+ * The checks, exercised against one real testnet run and against precise
  * mutations of it.
  *
  * Every check is a pure function over `(receipt, anchors, transactions)`, so a
@@ -67,7 +67,7 @@ function ownAnchors(input: VerificationInput): AnchorEntry[] {
 }
 
 describe("verifier checks on a real run", () => {
-  it("passes all five checks for the golden run", () => {
+  it("passes every applicable check for the golden run", () => {
     const results = runChecks(goldenInput());
     expect(results.map(result => result.name)).toEqual([...CHECK_NAMES]);
     expect(results.filter(result => !result.ok)).toEqual([]);

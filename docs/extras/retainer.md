@@ -61,8 +61,8 @@ exactly the account that pays for the order.
 
 ## What the verifier now checks
 
-A sixth check, `retainer on ledger`, joins the five. It is **optional by
-construction**: an order whose topic carries no `retainer_*` anchor is reported
+A further check, `retainer on ledger`, joins the others — it runs last. It is
+**optional by construction**: an order whose topic carries no `retainer_*` anchor is reported
 as *not applicable*, never failed, and `EXPECTED_STEPS` still requires the same
 six anchors — so every order without a retainer verifies exactly as before.
 
@@ -136,11 +136,9 @@ it, then verify — and asserts the verifier's verdict at the end.
   publishes as protobuf; the verifier does not decode it, and says so rather
   than implying the pending amount was checked.
 
-## For the docs lane
+## What the README says about this
 
-The README currently says the verifier has **five** checks, in two places (the
-"Verifying it yourself" table and the section above it). With this merged there
-are six, the sixth being optional. `tests/verifier/checks.test.ts` also has a
-test *titled* "passes all five checks" — it asserts against `CHECK_NAMES` and
-passes unchanged, but the title is now stale. Both were left alone deliberately:
-this lane did not edit the README or existing tests.
+The root `README.md` and `verifier/README.md` were updated when this lane merged: both list this
+check, note that it prints `N/A` for an order without a retainer, and document the four new
+environment variables. `tests/verifier/checks.test.ts` asserts against `CHECK_NAMES` rather than a
+count, so it did not need changing beyond its title.

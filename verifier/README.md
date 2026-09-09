@@ -54,7 +54,7 @@ FAIL  receipt anchor        this receipt hashes to 8dce26c78858…, the topic an
 NOT VERIFIED — 3 of 5 checks failed: receipt signature, payments on ledger, receipt anchor. 1 had nothing to check: agent identity.
 ```
 
-## The six checks
+## The seven checks
 
 | # | Check | What has to hold |
 |---|---|---|
@@ -64,11 +64,14 @@ NOT VERIFIED — 3 of 5 checks failed: receipt signature, payments on ledger, re
 | 4 | `anchor sequence` | all six steps of this order are on the topic, none twice, and they reached consensus in the order `mandate_in → payment_intake → accepted → delivered → payment_balance → receipt` |
 | 5 | `payments on ledger` | both transactions exist with `result: SUCCESS`, the payer is debited and the payee credited exactly `tinybars`, the network fee is paid by somebody other than the payer, and each `payment_*` anchor's hash equals `paymentAnchorHash` of the leg the receipt publishes |
 | 6 | `receipt anchor` | the `receipt` anchor's hash equals `envelopeHash(receipt)` — the receipt on the topic is this receipt |
+| 7 | `retainer on ledger` | when the order anchored a retainer: the schedule and the transfer it executed are on the mirror node, the receipt's payer authorised the schedule, the transfer moves the anchored amount between the two accounts the receipt names, both anchored hashes recompute from the ledger, and the release reached consensus after the `delivered` anchor |
 
 Check 5's fee-payer condition is what stops a "payment" from being a self-transfer dressed up: under
 the x402 `upfront` flow the facilitator pays the fee, so the fee payer is never the payer.
 
-Check 2 is the only one that can have nothing to decide, and then it prints `N/A` rather than `PASS`.
+Checks 2 and 7 are the ones that can have nothing to decide, and then they print `N/A` rather than
+`PASS`. Check 7 has nothing to decide whenever the order anchored no retainer, which is the ordinary
+case; see [`docs/extras/retainer.md`](../docs/extras/retainer.md).
 Two cases: an envelope that carries a plain handle, which is what every receipt issued before
 identifiers existed carries; and an identifier that would have to be resolved — a `uaid:aid:`, or a
 DID of a method other than `did:key`. This command reads the public mirror node and nothing else, so
@@ -115,8 +118,9 @@ statement about the order. When no anchors come back, the reader confirms the to
 | File | Role |
 |---|---|
 | `cli.ts` | argument handling, loading the documents, the report, the exit codes |
-| `checks.ts` | the six checks — each a pure function over `(receipt, anchors, transactions)` |
+| `checks.ts` | the checks — each a pure function over `(receipt, anchors, transactions)` |
 | `mirror.ts` | REST reads of the public mirror node, with pagination and retries |
+| `retainer.ts` | the optional retainer check, over a schedule and the transfer it executed |
 | `statement.ts` | the proves / does-not-prove wording, read from `docs/schemas/README.md` |
 
 ## Tests

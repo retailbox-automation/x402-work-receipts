@@ -60,7 +60,9 @@ funded testnet payer and payee.
 | Variable | Default | Meaning |
 |---|---|---|
 | `CONTRACTOR_HANDLE` | `agency-x-agent` | The contractor's protocol handle: `issuer` on its receipts |
-| `CONTRACTOR_AGENT` | `agency-x-agent` | Who the customer addresses; must match the handle above |
+| `CONTRACTOR_AGENT` | `agency-x-agent` | Who the customer addresses when no identifier is known: a handle, matching the one above |
+| `CONTRACTOR_UAID` | derived from `CONTRACTOR_SIGNING_KEY` | The contractor's HCS-14 identifier. On the customer side the same variable pins the counterparty and skips reading its agent card |
+| `CUSTOMER_UAID` | unset — the customer keeps its handle | `auto` derives an identifier from `CUSTOMER_SIGNING_KEY`; any other value is used verbatim and must be well formed |
 | `CUSTOMER_HANDLE` | `client-y-agent` | The customer's handle, written into `mandate.issuer` |
 | `CUSTOMER_AGENT` | the handle | Envelope `from`, when it differs from the issuer handle |
 | `CONTRACTOR_PORT` | `4021` | Port `npm run contractor:start` listens on |
@@ -76,6 +78,10 @@ funded testnet payer and payee.
 | `HEDERA_NETWORK` | `testnet` | Network the customer agent pays on |
 | `HEDERA_MIRROR_NODE_URL` | `https://testnet.mirrornode.hedera.com` | Mirror node the **contractor** reads its own anchors back from |
 | `ANCHOR_MIRROR_TIMEOUT_MS` | `30000` | How long the contractor waits for the mirror node to catch up |
+| `CONTRACTOR_PRIVATE_KEY` | falls back to `RECEIVER_PRIVATE_KEY` | Key the contractor releases a retainer with; required only for `npm run retainer -- release` |
+| `CONTRACTOR_KEY_TYPE` / `CUSTOMER_KEY_TYPE` | `ecdsa` | How those account keys are parsed |
+| `RETAINER_TINYBARS` | `1000000` | Amount a retainer holds (0.01 ℏ) |
+| `RETAINER_EXPIRY_SECONDS` | `1800` | How long an unreleased retainer stays pending before it lapses and the customer keeps the money (60…5356800) |
 
 **The verifier reads no variables at all.** Its mirror-node url is a constant in the code
 (`verifier/mirror.ts`), because a verifier that can be pointed somewhere else by an environment variable
@@ -128,7 +134,9 @@ Source: [`docs/diagrams/flow.mmd`](docs/diagrams/flow.mmd).
 | `anchor/` | The audit trail: topic creation, the `wr-anchor.v1` record shape, submitting an anchor and reading anchors back through the mirror node |
 | `contractor/` | The Express service: two x402-gated routes, one contractor-local delivery route, the job store, the simulated deliverable, and the receipt builders. [`contractor/README.md`](contractor/README.md) |
 | `customer/` | The ordering agent: `order` and `collect`, the x402 paying client with its spend controls, and the two identities it keeps apart — an Ed25519 signing key and a Hedera payment account |
-| `verifier/` | The stand-alone check: five pure functions over `(receipt, anchors, transactions)`, a mirror-node reader with retries, and the proves/does-not-prove statement |
+| `verifier/` | The stand-alone check: pure functions over `(receipt, anchors, transactions)`, a mirror-node reader with retries, and the proves/does-not-prove statement. [`verifier/README.md`](verifier/README.md) |
+| `retainer/` | The optional Scheduled Transaction retainer: the customer authorises a transfer up front, the contractor releases it after delivering. [`docs/extras/retainer.md`](docs/extras/retainer.md) |
+| `mcp/` | An MCP server exposing `order`, `collect` and `verify` as tools, so the flow is reachable from any agent runtime. [`docs/extras/mcp.md`](docs/extras/mcp.md) |
 | `demo/` | `run-e2e.ts` — the whole flow in one command, and `last-run.json`, the record of the run in the table below |
 | `docs/` | `specs/` (the design), `plans/` (the implementation plan), `schemas/` (the two copied schemas, the generated payment profile, and their provenance) |
 | `spike/` | The first real payment through the facilitator, kept as-is with every gotcha written up |
@@ -215,15 +223,19 @@ fingerprint the topic recorded; with it, it recomputes that fingerprint from the
 codes are three, not two — `0` verified, `1` a check failed, `2` the check could not be completed —
 because "this receipt does not hold up" and "I could not look" must never arrive as the same answer.
 
-These are the five checks, with the verdicts from the run above:
+These are the seven checks, with the verdicts from the run above. Two of them can have nothing to
+decide, and then they print `N/A` rather than `PASS` — the report says what the evidence
+establishes, and "the document made no such claim" is not the same statement as "the claim holds":
 
 | Check | What it establishes | Verdict |
 |---|---|---|
 | `receipt signature` | The receipt verifies against the key it carries, over its bytes as issued | PASS — signed by `99573eae7ac7…` |
+| `agent identity` | The HCS-14 identifier in the envelope decodes to the key that signed the receipt | N/A — this run predates identifiers, so its envelopes carry plain handles ([`docs/extras/identity.md`](docs/extras/identity.md)) |
 | `mandate hash linkage` | The receipt, the `mandate_in` anchor and the work-order file name the same fingerprint | PASS — `472a38aa…` in all three |
 | `anchor sequence` | All six anchors exist for this order, in the right order, ascending by consensus | PASS — #91 → #96 |
 | `payments on ledger` | Both transfers are on chain with the stated payer, payee and amounts, and the fee payer is neither | PASS — 1 000 000 and 4 000 000 tinybars |
 | `receipt anchor` | The receipt's own hash is the one the topic recorded | PASS — `ddb1b0fa…` at #96 |
+| `retainer on ledger` | When the order anchored a retainer: the schedule, the transfer it executed, and a release that came after delivery | N/A — this order has no retainer ([`docs/extras/retainer.md`](docs/extras/retainer.md)) |
 
 The verifier talks to nobody but `https://testnet.mirrornode.hedera.com/api/v1`. It never calls the
 contractor or the customer, holds no keys, and cannot write anything.
@@ -231,8 +243,11 @@ contractor or the customer, holds no keys, and cannot write anything.
 ## Standards context
 
 - **[HCS-14](https://github.com/hiero-ledger/hiero-consensus-specifications/blob/main/docs/standards/hcs-14/index.md)
-  — identity.** The Universal Agent ID standard: who an agent *is*, as a stable, resolvable `uaid`. Today this repository uses plain handles in
-  `Envelope.from` / `Envelope.to`; adopting `uaid` is the natural next step and is listed in the plan.
+  — identity.** The Universal Agent ID standard: who an agent *is*, as a stable, resolvable `uaid`.
+  Both agents here sign as `uaid:did:z6Mk…` — a `did:key` identifier that *is* their Ed25519 public key
+  in another encoding — and the contractor publishes its own at `GET /.well-known/agent.json`. The verifier
+  decodes the identifier out of an envelope and compares it with the key that signed, offline, with no
+  registry to ask and no DID to resolve.
 - **This layer — a provable fact.** What actually happened between two identified agents: a mandate
   fingerprint, an acceptance, a delivery and two settled payments, each fixed at a consensus timestamp
   neither party controls.
@@ -244,8 +259,8 @@ contractor or the customer, holds no keys, and cannot write anything.
 
 **The score is not used as a gate here, and this project does not compute one.** HCS-25 says so itself —
 a trust score must not be the sole authoritative basis for irreversible gating — and the check that
-decides anything in this repository is the verifier's five, each of which points at a specific public
-record.
+decides anything in this repository is the verifier's, and each of its checks points at a specific
+public record.
 
 ## AI collaboration
 
@@ -274,10 +289,14 @@ window, which opened 2026-09-04 12:00 EDT. The commit history starts there.
 
 ## Roadmap
 
-Nearest, in order: agent identity via HCS-14 `uaid` resolved by the verifier; a Scheduled Transaction
-retainer so a customer can pre-authorize a run of orders; a custom fee on the anchor topic (HIP-991) so
-the audit trail funds itself; and an MCP server exposing `order`, `collect` and `verify` as tools, so the
-flow is reachable from any agent runtime rather than only from this CLI.
+Shipped since the first end-to-end run: agent identity via HCS-14 `uaid`, resolved by the verifier
+([`docs/extras/identity.md`](docs/extras/identity.md)); a Scheduled Transaction retainer the customer
+authorises up front and the contractor releases after delivering, checked against the ledger
+([`docs/extras/retainer.md`](docs/extras/retainer.md)); and an MCP server exposing `order`, `collect`
+and `verify` as tools, so the flow is reachable from any agent runtime rather than only from this CLI
+([`docs/extras/mcp.md`](docs/extras/mcp.md)).
+
+Nearest: a custom fee on the anchor topic (HIP-991) so the audit trail funds itself.
 
 Where it goes: agencies and their clients already exchange work orders and sign-offs — in trackers, in
 chat, in invoices — and already argue about what was agreed. The pieces that make this saleable are not

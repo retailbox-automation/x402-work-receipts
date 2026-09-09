@@ -6,7 +6,7 @@ Desktop, or any other MCP client) can drive an order without shelling out to the
 
 It is a thin wrapper. Every tool calls the same functions the CLIs call: `customer/cli.ts` and
 `customer/pay.ts` for signing and paying, `verifier/cli.ts` for checking a receipt against the public
-mirror node. Nothing about x402, envelope signing, schema validation or the five checks is
+mirror node. Nothing about x402, envelope signing, schema validation or the verifier's checks is
 re-implemented here — this file only adapts them to MCP's tool-call shape and shapes the reply as
 structured JSON plus a matching text block.
 
@@ -44,7 +44,7 @@ from a project root, or from `claude mcp add-json`):
 |---|---|---|
 | `order` | `story` (inline) **or** `storyPath`, plus optional `to` / `out` | Signs a `mandate.v1`, pays the intake fee, stores the acceptance. Returns the taken/declined criteria and the anchor topic. |
 | `collect` | `mandateId`, plus optional `to` / `out` | Pays the balance once delivered, stores `receipt.v1+payment.v1`. Returns both payment legs with their amounts (from the signed receipt, not from the client's own record of what it sent) and the deliverable links. |
-| `verify` | `topic`, plus `receiptPath` **or** `receipt` (inline JSON), optionally `mandatePath` / `mandate` | Runs the same five checks the `verify` CLI runs, against the public mirror node only. Returns `verdict` (`PASS`/`FAIL`/`ERROR`), `exit_code` (0/1/2, same meaning as the CLI), the check table, and the full printable report. |
+| `verify` | `topic`, plus `receiptPath` **or** `receipt` (inline JSON), optionally `mandatePath` / `mandate` | Runs the same checks the `verify` CLI runs, against the public mirror node only. Returns `verdict` (`PASS`/`FAIL`/`ERROR`), `exit_code` (0/1/2, same meaning as the CLI), the check table, and the full printable report. |
 
 `order`'s `story` and `collect`'s deliverable both flow straight from `customer/cli.ts`'s own types — an
 inline `story` argument is the same shape as a story-card JSON file (`story_ref`, `story_url`, `title`,
@@ -90,7 +90,9 @@ Order `01a08689-0b4c-7b08-b092-67c02635afe8`, 2026-09-09, Hedera testnet, topic
 - **`collect`** → balance paid,
   [`0.0.7162784@1788963528.689876936`](https://hashscan.io/testnet/transaction/0.0.7162784@1788963528.689876936),
   anchored `delivered` #108, `payment_balance` #109, `receipt` #110.
-- **`verify`** → `{"verdict":"PASS","exit_code":0}`, all 5 checks:
+- **`verify`** → `{"verdict":"PASS","exit_code":0}`, all 5 checks — the transcript below is the run as it
+  happened, before the `agent identity` and `retainer on ledger` checks existed; the same order verifies
+  today with those two reported `N/A`:
 
 ```
       check                 detail

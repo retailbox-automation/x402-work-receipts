@@ -171,16 +171,15 @@ receipt.
 - **The reserved skill range is enforced, the rest of the taxonomy is not.** `40–99` are rejected as
   the standard requires; whether a claimed skill is *true* is not something code can check.
 
-## Notes for whoever writes the README
+## What the README says about this
 
-- The root `README.md` says "five checks" in several places, lists them in a five-row table, and its
-  "A real run" section describes the run recorded in `demo/last-run.json`. There are six checks now,
-  the sixth is `agent identity`, and a check can print `N/A`.
+The root `README.md` was updated when this lane merged: the checks table lists all seven, `agent
+identity` among them, and the Standards-context section describes what shipped instead of naming it
+as the next step.
+
 - `demo/last-run.json` was deliberately **not** updated by this lane, so it still records the run the
-  README's table describes. The run above is a later one; re-run `npm run demo` and update both
-  together if the README should point at a run that shows the identity check.
-- The README's Standards-context section says of HCS-14 that "today this repository uses plain
-  handles in `Envelope.from` / `Envelope.to`; adopting `uaid` is the natural next step and is listed
-  in the plan". That is now done, and the same is true of the first item in the Roadmap list.
+  README's table describes — a run that predates identifiers, which is why the README shows `agent
+  identity` as `N/A` for it. The run in this document is a later one; re-run `npm run demo` and
+  update both together if the README should point at a run that shows the check passing.
 - `docs/schemas/*` and the proves/does-not-prove statement were not touched. They are copies of an
   upstream protocol, and this extra adds no claim about what the chain proves.

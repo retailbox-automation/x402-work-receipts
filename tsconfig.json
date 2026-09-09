@@ -17,6 +17,7 @@
     "anchor/**/*.ts",
     "contractor/**/*.ts",
     "customer/**/*.ts",
+    "retainer/**/*.ts",
     "mcp/**/*.ts",
     "verifier/**/*.ts",
     "demo/**/*.ts",

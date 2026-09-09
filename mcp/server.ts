@@ -6,7 +6,7 @@
  * receipt — this file only adapts them to the Model Context Protocol so any
  * MCP-speaking agent runtime can drive the exchange without shelling out to
  * the CLI. The x402 payment logic, the envelope signing, the schema
- * validation and the five checks all live where they already did; nothing
+ * validation and the verifier's checks all live where they already did; nothing
  * here re-implements any of them.
  *
  * Every tool answers with a structured result and a matching JSON text block,
@@ -31,6 +31,7 @@ import {
   buildMandate,
   buildMandateEnvelope,
   parseAcceptedResponse,
+  resolveCounterparty,
   parseDeliveredResponse,
   saveOrderArtifacts,
   saveReceiptArtifact,
@@ -220,8 +221,13 @@ export async function runOrderTool(
     const outDir = args.out ?? config.outDir;
 
     const story = args.storyPath ? loadStoryFile(args.storyPath) : (args.story as Story);
-    const mandate = buildMandate(story, { issuer: config.signing.handle });
-    const envelope = buildMandateEnvelope(mandate, config.signing);
+    // Same discovery the CLI does: ask the contractor for its agent card so the
+    // order is addressed to the identifier it publishes, and fall back to the
+    // handle when there is no card. The two entry points must not sign
+    // different documents for the same order.
+    const identity = await resolveCounterparty(base, config.signing);
+    const mandate = buildMandate(story, { issuer: identity.handle });
+    const envelope = buildMandateEnvelope(mandate, identity);
 
     const paid = createPaidFetch(config.payment);
     const result = await payFor<unknown>(paid, `${base}/mandates`, {
