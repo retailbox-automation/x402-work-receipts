@@ -16,6 +16,7 @@
     "contractor:start": "tsx contractor/server.ts",
     "customer": "tsx customer/cli.ts",
     "verify": "tsx verifier/cli.ts",
+    "retainer": "tsx retainer/cli.ts",
     "demo": "tsx demo/run-e2e.ts"
   },
   "dependencies": {
