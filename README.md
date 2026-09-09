@@ -24,6 +24,10 @@ below in the same words the verifier prints on every run.
 
 ## Setup
 
+There is a hosted contractor at **https://x402-work-receipts.zeabur.app** if you would rather not run
+one — point the customer CLI at it with `--to`, and see [`docs/extras/hosting.md`](docs/extras/hosting.md)
+for a real order placed against it.
+
 Node ≥ 22 (the code uses `node:` built-ins and native `fetch`). `npm install`, then create `.env` in the
 repository root. It is gitignored and must stay that way: every value below is either a secret or an
 account that spends money.
@@ -65,7 +69,7 @@ funded testnet payer and payee.
 | `CUSTOMER_UAID` | unset — the customer keeps its handle | `auto` derives an identifier from `CUSTOMER_SIGNING_KEY`; any other value is used verbatim and must be well formed |
 | `CUSTOMER_HANDLE` | `client-y-agent` | The customer's handle, written into `mandate.issuer` |
 | `CUSTOMER_AGENT` | the handle | Envelope `from`, when it differs from the issuer handle |
-| `CONTRACTOR_PORT` | `4021` | Port `npm run contractor:start` listens on |
+| `CONTRACTOR_PORT` | `4021` | Port `npm run contractor:start` listens on. A platform's injected `PORT` is used when this is unset, so a host can pick the port without either being renamed |
 | `CONTRACTOR_URL` | `http://localhost:4021` | Where the customer CLI looks without `--to` |
 | `CONTRACTOR_STORE` | `out/contractor/jobs.json` | The job store; it survives a restart between the two paid calls |
 | `CUSTOMER_OUT_DIR` | `out` | Where the customer writes one folder of artifacts per order |
@@ -306,11 +310,6 @@ window, which opened 2026-09-04 12:00 EDT. The commit history starts there.
 
 What the extras above do not cover, in order of how soon each is coming:
 
-- **A hosted contractor, not only `localhost:4021`.** The demo and the run recorded in this README are
-  against a locally started service; a Zeabur deployment with an uptime watcher through the judging
-  period is planned but not yet live. The facilitator never needs to reach the contractor directly — the
-  customer carries the signed payload to it — so this is a submission and usability gap, not a protocol
-  one.
 - **A contribution to `hedera-dev/hedera-harness`** — a deterministic mirror-node check for its `CHAIN`
   step, as a PR against the `dev` branch. Scoped, not started; separate repository, separate prize
   category from the flow above.
