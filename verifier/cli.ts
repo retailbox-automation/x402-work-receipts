@@ -167,6 +167,10 @@ export function loadMandate(path: string): Envelope<Mandate> {
 /**
  * Renders the verdicts as a table.
  *
+ * A check with nothing to decide prints `N/A`, never `PASS`: the reader is
+ * being told what the evidence establishes, and "the document made no such
+ * claim" is not the same statement as "the claim holds".
+ *
  * @param results - One entry per check
  * @returns The table, without a trailing newline
  */
@@ -174,7 +178,7 @@ export function renderTable(results: CheckResult[]): string {
   const width = Math.max(...results.map(result => result.name.length), 5);
   const lines = [`${"".padEnd(6)}${"check".padEnd(width)}  detail`];
   for (const result of results) {
-    const status = result.ok ? "PASS" : "FAIL";
+    const status = result.applicable === false ? "N/A" : result.ok ? "PASS" : "FAIL";
     lines.push(`${status.padEnd(6)}${result.name.padEnd(width)}  ${result.detail}`);
   }
   return lines.join("\n");
@@ -274,11 +278,17 @@ function report(
 ): string {
   const rule = "─".repeat(REPORT_WIDTH);
   const failed = checks.filter(check => !check.ok);
+  const skipped = checks.filter(check => check.applicable === false);
+  const ran = checks.length - skipped.length;
+  const aside =
+    skipped.length === 0
+      ? ""
+      : ` ${skipped.length} had nothing to check: ${skipped.map(check => check.name).join(", ")}.`;
   const verdict = passed
-    ? `VERIFIED — all ${checks.length} checks passed against the public record.`
-    : `NOT VERIFIED — ${failed.length} of ${checks.length} checks failed: ${failed
+    ? `VERIFIED — all ${ran} applicable checks passed against the public record.${aside}`
+    : `NOT VERIFIED — ${failed.length} of ${ran} checks failed: ${failed
         .map(check => check.name)
-        .join(", ")}.`;
+        .join(", ")}.${aside}`;
 
   return [
     `order   ${receipt.data.mandate_id}`,

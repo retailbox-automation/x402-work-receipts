@@ -1,5 +1,5 @@
 /**
- * The five checks that turn a receipt and a public topic back into a verdict.
+ * The checks that turn a receipt and a public topic back into a verdict.
  *
  * Each check is a pure function over `(receipt, anchors, transactions)`. It
  * fetches nothing, so it can be run against recorded data, and it decides one
@@ -15,27 +15,32 @@
 import { type AnchorEntry, type AnchorKind, toMirrorTxId } from "../anchor/records.js";
 import { paymentAnchorHash } from "../contractor/receipts.js";
 import { envelopeHash, verifyEnvelope } from "../protocol/envelope.js";
+import { isUaid, publicKeyForUaid, uaidProblems } from "../protocol/identity.js";
 import type { Envelope, Mandate, Payment, PaymentLeg, PaymentReceipt } from "../protocol/types.js";
 import type { MirrorTransaction } from "./mirror.js";
 
 /** Check 1: the contractor really signed this receipt. */
 export const CHECK_SIGNATURE = "receipt signature";
 
-/** Check 2: the receipt, the topic and the work order all name the same order. */
+/** Check 2: the identifier the receipt comes from is the key that signed it. */
+export const CHECK_IDENTITY = "agent identity";
+
+/** Check 3: the receipt, the topic and the work order all name the same order. */
 export const CHECK_MANDATE_LINK = "mandate hash linkage";
 
-/** Check 3: all six steps are on the topic, in the order they must have happened. */
+/** Check 4: all six steps are on the topic, in the order they must have happened. */
 export const CHECK_ANCHOR_SEQUENCE = "anchor sequence";
 
-/** Check 4: both payments are on the ledger, with the stated parties and amounts. */
+/** Check 5: both payments are on the ledger, with the stated parties and amounts. */
 export const CHECK_PAYMENTS = "payments on ledger";
 
-/** Check 5: the receipt on the topic is this receipt. */
+/** Check 6: the receipt on the topic is this receipt. */
 export const CHECK_RECEIPT_ANCHOR = "receipt anchor";
 
 /** The checks, in the order they are run and printed. */
 export const CHECK_NAMES = [
   CHECK_SIGNATURE,
+  CHECK_IDENTITY,
   CHECK_MANDATE_LINK,
   CHECK_ANCHOR_SEQUENCE,
   CHECK_PAYMENTS,
@@ -57,6 +62,15 @@ export type CheckResult = {
   name: string;
   ok: boolean;
   detail: string;
+  /**
+   * False when the check had nothing to decide — the document carries no claim
+   * of the kind this check examines. Absent means the check ran.
+   *
+   * It is kept apart from `ok` because "there was nothing to check" is not a
+   * pass, and a reader who is told six things passed when one of them was never
+   * examined has been told something false.
+   */
+  applicable?: boolean;
 };
 
 /** Everything a check is allowed to look at. */
@@ -112,6 +126,7 @@ export function paymentTransactionIds(receipt: Envelope<PaymentReceipt>): string
 export function runChecks(input: VerificationInput): CheckResult[] {
   return [
     checkReceiptSignature(input),
+    checkAgentIdentity(input),
     checkMandateLinkage(input),
     checkAnchorSequence(input),
     checkPayments(input),
@@ -141,7 +156,113 @@ export function checkReceiptSignature(input: VerificationInput): CheckResult {
 }
 
 /**
- * Check 2 — receipt, topic and work order all point at the same sealed mandate.
+ * Check 2 — the identifier the receipt comes from is the key that signed it.
+ *
+ * Check 1 establishes that a key signed this document. It does not establish
+ * *whose* key: `sig.pub` is 32 bytes, and a handle like `agency-x-agent` is a
+ * name anyone may write. An HCS-14 identifier closes that gap when it is a
+ * `uaid:did:` over `did:key`, because the identifier is the public key in
+ * another encoding — decode it, compare, done, with no registry to ask and
+ * nobody to trust.
+ *
+ * Where there is no such claim the check says so and decides nothing. Two
+ * cases: envelopes that still carry plain handles, which is what every receipt
+ * issued before this existed carries; and identifiers that would have to be
+ * resolved — a `uaid:aid:`, which is a hash of descriptive fields, or a DID of
+ * some other method. This verifier reads the public mirror node and nothing
+ * else, so it cannot resolve either, and pretending a lookup it never made came
+ * back clean would be the one dishonest thing in the report.
+ *
+ * @param input - Verification input
+ * @returns The verdict, or a not-applicable result when there is no claim
+ */
+export function checkAgentIdentity(input: VerificationInput): CheckResult {
+  const { from, to, sig } = input.receipt;
+  const signer = sig?.pub?.toLowerCase() ?? "";
+
+  if (!isUaid(from)) {
+    return {
+      name: CHECK_IDENTITY,
+      ok: true,
+      applicable: false,
+      detail: `the receipt comes from "${from}", a handle rather than an HCS-14 identifier — it makes no identity claim to check`,
+    };
+  }
+
+  const problems = uaidProblems(from).map(problem => `the issuer identifier: ${problem}`);
+  if (typeof to === "string" && to.startsWith("uaid:") && !isUaid(to)) {
+    problems.push(`the receipt is addressed to "${to}", which is not a well-formed identifier`);
+  }
+  if (problems.length > 0) {
+    return fail(CHECK_IDENTITY, problems.join("; "));
+  }
+
+  const claimed = publicKeyForUaid(from);
+  if (claimed === null) {
+    return {
+      name: CHECK_IDENTITY,
+      ok: true,
+      applicable: false,
+      detail: `${from} names no key of its own — it would have to be resolved, and this verifier reads only the public mirror node`,
+    };
+  }
+  if (claimed !== signer) {
+    return fail(
+      CHECK_IDENTITY,
+      `the receipt is signed by ${short(signer)} but comes from an identifier that names ${short(claimed)}`,
+    );
+  }
+
+  const mismatches = counterpartyProblems(input);
+  if (mismatches.length > 0) {
+    return fail(CHECK_IDENTITY, mismatches.join("; "));
+  }
+
+  const addressed = typeof to === "string" && isUaid(to) ? `, addressed to ${shortId(to)}` : "";
+  return {
+    name: CHECK_IDENTITY,
+    ok: true,
+    detail: `${shortId(from)} is the key that signed this receipt (${short(signer)})${addressed}`,
+  };
+}
+
+/**
+ * What the work order says about who the receipt is addressed to.
+ *
+ * Only checkable when the verifier holds the order: it is the customer's own
+ * signed document, so it is the one place an outsider can see whether the
+ * agent the contractor answered is the agent that asked.
+ *
+ * @param input - Verification input
+ * @returns Problems; empty when there is no work order or nothing disagrees
+ */
+function counterpartyProblems(input: VerificationInput): string[] {
+  const mandate = input.mandate;
+  if (!mandate) {
+    return [];
+  }
+  const problems: string[] = [];
+  const sender = mandate.from;
+
+  if (isUaid(sender)) {
+    const key = publicKeyForUaid(sender);
+    const signer = mandate.sig?.pub?.toLowerCase() ?? "";
+    if (key !== null && key !== signer) {
+      problems.push(
+        `the work order comes from an identifier naming ${short(key)} but was signed by ${short(signer)}`,
+      );
+    }
+  }
+  if (input.receipt.to !== sender) {
+    problems.push(
+      `the receipt is addressed to "${input.receipt.to}" but the work order came from "${sender}"`,
+    );
+  }
+  return problems;
+}
+
+/**
+ * Check 3 — receipt, topic and work order all point at the same sealed mandate.
  *
  * The receipt claims a mandate envelope hash. That claim is worth something
  * only if the same hash is on the public topic; and if the verifier also holds
@@ -202,7 +323,7 @@ export function checkMandateLinkage(input: VerificationInput): CheckResult {
 }
 
 /**
- * Check 3 — the six steps of the order are on the topic, in order.
+ * Check 4 — the six steps of the order are on the topic, in order.
  *
  * Order is taken from consensus time, not from the anchors' own `at` field: the
  * network decides when something happened, the writer only claims it.
@@ -253,7 +374,7 @@ export function checkAnchorSequence(input: VerificationInput): CheckResult {
 }
 
 /**
- * Check 4 — both payments really happened, to the parties the receipt names.
+ * Check 5 — both payments really happened, to the parties the receipt names.
  *
  * Four things have to line up per leg: the transfer succeeded; the payer lost
  * exactly the stated amount; the payee gained exactly the stated amount; and
@@ -300,7 +421,7 @@ export function checkPayments(input: VerificationInput): CheckResult {
 }
 
 /**
- * Check 5 — the receipt on the topic is byte for byte this receipt.
+ * Check 6 — the receipt on the topic is byte for byte this receipt.
  *
  * The hash covers the envelope as signed, so this is what fixes the document in
  * time: any later edit changes the hash and this check stops matching.
@@ -473,6 +594,24 @@ function compareConsensus(left: string, right: string): number {
  */
 function fail(name: string, detail: string): CheckResult {
   return { name, ok: false, detail };
+}
+
+/**
+ * Shortens an identifier for a one-line message, keeping the part that identifies.
+ *
+ * The routing parameters are dropped and the id is cut, because what a reader
+ * needs from a `uaid:did:z6Mk…` in a table row is which agent it is, not the
+ * whole string; the full value is in the receipt.
+ *
+ * @param value - An identifier
+ * @returns A short form
+ */
+function shortId(value: string): string {
+  const head = value.split(";")[0] ?? value;
+  const marker = head.lastIndexOf(":");
+  const id = marker === -1 ? head : head.slice(marker + 1);
+  const scheme = marker === -1 ? "" : head.slice(0, marker + 1);
+  return id.length <= 16 ? head : `${scheme}${id.slice(0, 12)}…`;
 }
 
 /**
