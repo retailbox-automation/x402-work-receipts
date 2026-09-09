@@ -66,7 +66,27 @@ export type MirrorTransaction = {
   name?: string;
   consensus_timestamp?: string;
   charged_tx_fee?: number;
+  /** True for the inner transfer of a Scheduled Transaction, false for its ScheduleCreate. */
+  scheduled?: boolean;
   transfers: TransferEntry[];
+};
+
+/**
+ * A schedule as returned by `GET /api/v1/schedules/{id}`.
+ *
+ * `executed_timestamp` is the whole point: null while the schedule waits for
+ * signatures, and the consensus time of the transfer once it has run.
+ */
+export type MirrorSchedule = {
+  schedule_id: string;
+  creator_account_id?: string;
+  payer_account_id?: string;
+  consensus_timestamp?: string;
+  executed_timestamp?: string | null;
+  expiration_time?: string | null;
+  wait_for_expiry?: boolean;
+  deleted?: boolean;
+  memo?: string;
 };
 
 /** How hard to try before giving up on a read. */
@@ -80,6 +100,9 @@ export type AnchorReader = (topicId: string) => Promise<AnchorEntry[]>;
 
 /** Reads one transaction, or null when the ledger does not have it. */
 export type TransactionReader = (transactionId: string) => Promise<MirrorTransaction | null>;
+
+/** Reads one schedule entity, or null when the ledger does not have it. */
+export type ScheduleReader = (scheduleId: string) => Promise<MirrorSchedule | null>;
 
 /** One message of `GET /api/v1/topics/{id}/messages`. */
 type TopicMessage = {
@@ -215,11 +238,97 @@ export async function readTransaction(
 }
 
 /**
+ * Reads a schedule entity from the mirror node.
+ *
+ * @param scheduleId - Schedule entity id, `0.0.x`
+ * @param options - Retry behaviour
+ * @returns The schedule, or null when the ledger does not have it
+ * @throws {MirrorError} When the lookup itself failed
+ */
+export async function readSchedule(
+  scheduleId: string,
+  options?: RetryOptions,
+): Promise<MirrorSchedule | null> {
+  const fetched = await getJson<MirrorSchedule>(
+    `${MIRROR_NODE_URL}/api/v1/schedules/${scheduleId}`,
+    options,
+  );
+  return fetched.found ? fetched.body : null;
+}
+
+/**
+ * Reads the transfer a Scheduled Transaction executed.
+ *
+ * A schedule and the transfer it runs share one transaction id, so
+ * `/api/v1/transactions/{id}` answers with two records: the ScheduleCreate that
+ * set the retainer up, and — once it has been released — the transfer itself.
+ * Both say `SUCCESS`, so {@link readTransaction}'s "first successful record"
+ * rule would return the ScheduleCreate, whose transfer list is a network fee
+ * and not the retainer at all. The inner transfer is the one flagged
+ * `scheduled`, and that flag is the only thing that tells them apart.
+ *
+ * @param transactionId - Facilitator or mirror form; a `?scheduled` suffix must already be stripped
+ * @param options - Retry behaviour
+ * @returns The executed transfer, or null when it has not run
+ * @throws {MirrorError} When the lookup itself failed
+ */
+export async function readScheduledTransaction(
+  transactionId: string,
+  options?: RetryOptions,
+): Promise<MirrorTransaction | null> {
+  const mirrorId = toMirrorTxId(transactionId);
+  const fetched = await getJson<TransactionPage>(
+    `${MIRROR_NODE_URL}/api/v1/transactions/${mirrorId}`,
+    options,
+  );
+  if (!fetched.found) {
+    return null;
+  }
+  return (fetched.body.transactions ?? []).find(transaction => transaction.scheduled === true) ?? null;
+}
+
+/**
+ * Reads the transaction that reached consensus at an exact timestamp.
+ *
+ * Consensus timestamps are unique across the network, so this addresses one
+ * transaction precisely. It is how a schedule is joined to the transfer it
+ * executed: the schedule publishes `executed_timestamp` but not the transfer's
+ * transaction id, and the transfer inherits the id of the `ScheduleCreate`
+ * rather than carrying one of its own.
+ *
+ * @param consensusTimestamp - `seconds.nanoseconds`, as the mirror node prints it
+ * @param options - Retry behaviour
+ * @returns The transaction, or null when nothing is recorded at that instant
+ * @throws {MirrorError} When the lookup itself failed
+ */
+export async function readTransactionAtTimestamp(
+  consensusTimestamp: string,
+  options?: RetryOptions,
+): Promise<MirrorTransaction | null> {
+  const query = new URLSearchParams({ timestamp: consensusTimestamp });
+  const fetched = await getJson<TransactionPage>(
+    `${MIRROR_NODE_URL}/api/v1/transactions?${query.toString()}`,
+    options,
+  );
+  if (!fetched.found) {
+    return null;
+  }
+  return (fetched.body.transactions ?? [])[0] ?? null;
+}
+
+/**
  * Live readers, used by the command unless a caller injects its own.
  */
-export const liveMirror: { readAnchors: AnchorReader; readTransaction: TransactionReader } = {
+export const liveMirror: {
+  readAnchors: AnchorReader;
+  readTransaction: TransactionReader;
+  readSchedule: ScheduleReader;
+  readScheduledTransaction: TransactionReader;
+} = {
   readAnchors: topicId => readTopicAnchors(topicId),
   readTransaction: transactionId => readTransaction(transactionId),
+  readSchedule: scheduleId => readSchedule(scheduleId),
+  readScheduledTransaction: transactionId => readScheduledTransaction(transactionId),
 };
 
 /**

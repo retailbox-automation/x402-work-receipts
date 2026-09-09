@@ -23,7 +23,15 @@ export { canonicalize };
 /** Schema tag carried by every anchor message. */
 export const ANCHOR_VERSION = "wr-anchor.v1";
 
-/** The six steps of one order, in the order they are anchored. */
+/**
+ * Every step that can be anchored.
+ *
+ * The first six are the order itself, in the sequence they are written, and
+ * they are what the verifier requires. The two `retainer_*` kinds are optional:
+ * they record a Hedera Scheduled Transaction the customer authorised up front
+ * and the contractor released after delivery. An order without a retainer is a
+ * complete order, so nothing was added to the required sequence.
+ */
 export const ANCHOR_KINDS = [
   "mandate_in",
   "accepted",
@@ -31,11 +39,17 @@ export const ANCHOR_KINDS = [
   "payment_intake",
   "payment_balance",
   "receipt",
+  "retainer_scheduled",
+  "retainer_released",
 ] as const;
 
 export type AnchorKind = (typeof ANCHOR_KINDS)[number];
 
-/** One anchor message. `ref` carries the mirror-form tx id for `payment_*` kinds. */
+/**
+ * One anchor message. `ref` carries the mirror-form transaction id for the
+ * `payment_*` and `retainer_released` kinds, and the schedule entity id
+ * (`0.0.x`) for `retainer_scheduled`.
+ */
 export type AnchorRecord = {
   v: "wr-anchor.v1";
   kind: AnchorKind;
@@ -59,6 +73,16 @@ const HASH_STRICT = /^[0-9a-f]{64}$/;
 
 /** Same, case-insensitive: what we are willing to read back from a public topic. */
 const HASH_LENIENT = /^[0-9a-fA-F]{64}$/;
+
+/** `0.0.10440150` — a schedule entity id, the `ref` of a `retainer_scheduled` anchor. */
+const SCHEDULE_ID = /^\d+\.\d+\.\d+$/;
+
+/** Anchor kinds whose `ref` is a transaction, not a schedule. */
+const TRANSACTION_REF_KINDS: readonly string[] = [
+  "payment_intake",
+  "payment_balance",
+  "retainer_released",
+];
 
 /**
  * Canonical JSON body of an anchor — the exact bytes submitted to HCS.
@@ -134,7 +158,7 @@ export function assertWritableAnchor(record: AnchorRecord): void {
   if (!HASH_STRICT.test(record.hash)) {
     throw new TypeError(`Anchor hash must be lowercase sha-256 hex, got "${record.hash}"`);
   }
-  if (record.kind.startsWith("payment_")) {
+  if (TRANSACTION_REF_KINDS.includes(record.kind)) {
     if (record.ref === undefined) {
       throw new TypeError(`Anchor kind "${record.kind}" needs a transaction id in "ref"`);
     }
@@ -145,6 +169,47 @@ export function assertWritableAnchor(record: AnchorRecord): void {
       );
     }
   }
+  if (record.kind === "retainer_scheduled") {
+    if (record.ref === undefined) {
+      throw new TypeError(`Anchor kind "${record.kind}" needs a schedule id in "ref"`);
+    }
+    // A schedule is an entity, not a transaction: the verifier looks it up at
+    // /api/v1/schedules/{id}, so writing a transaction id here would send it to
+    // the wrong endpoint and read as "the retainer is not on the ledger".
+    if (!SCHEDULE_ID.test(record.ref)) {
+      throw new TypeError(`Anchor "ref" must be a schedule id (0.0.x), got "${record.ref}"`);
+    }
+  }
+}
+
+/**
+ * Orders two `seconds.nanoseconds` consensus timestamps.
+ *
+ * Compared as numbers per part rather than as strings, so nanosecond fields of
+ * different lengths cannot order wrongly.
+ *
+ * @param left - First timestamp
+ * @param right - Second timestamp
+ * @returns Negative, zero or positive as usual for a comparator
+ */
+export function compareConsensus(left: string, right: string): number {
+  const [leftSeconds, leftNanos = "0"] = left.split(".");
+  const [rightSeconds, rightNanos = "0"] = right.split(".");
+  const seconds = Number(leftSeconds) - Number(rightSeconds);
+  if (seconds !== 0) {
+    return seconds;
+  }
+  return Number(leftNanos.padEnd(9, "0")) - Number(rightNanos.padEnd(9, "0"));
+}
+
+/**
+ * Reports whether a string is a Hedera entity id of the `0.0.x` shape.
+ *
+ * @param value - Candidate id
+ * @returns True when the string is an entity id
+ */
+export function isScheduleId(value: unknown): value is string {
+  return typeof value === "string" && SCHEDULE_ID.test(value);
 }
 
 /**
