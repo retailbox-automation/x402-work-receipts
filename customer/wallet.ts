@@ -11,6 +11,7 @@
  * into a tracked file; `.env` holds the keys and is not committed.
  */
 import { publicKeyHex } from "../protocol/envelope.js";
+import { hederaNativeId, isUaid, uaidFromPublicKey } from "../protocol/identity.js";
 
 /** CAIP-2 identifier of the Hedera network payments settle on. */
 export type HederaNetwork = "hedera:testnet" | "hedera:mainnet";
@@ -46,9 +47,15 @@ const TINYBARS_PATTERN = /^[1-9][0-9]*$/;
 export type SigningIdentity = {
   /** Handle written into `mandate.issuer`. */
   handle: string;
-  /** Envelope `from`. */
+  /** Envelope `from` when the agent has no HCS-14 identifier. */
   agent: string;
-  /** Envelope `to` — the contractor agent. */
+  /**
+   * The agent's HCS-14 identifier, when it publishes one. Preferred over
+   * {@link SigningIdentity.agent} as the envelope's `from`, because it names
+   * the signing key rather than a name anyone may also use.
+   */
+  uaid?: string;
+  /** Envelope `to` — the contractor agent, by handle or by identifier. */
   counterparty: string;
   /** Ed25519 secret key, hex. */
   privateKeyHex: string;
@@ -103,8 +110,8 @@ export function loadSigningIdentity(env: NodeJS.ProcessEnv = process.env): Signi
   const handle = env["CUSTOMER_HANDLE"]?.trim() || "client-y-agent";
   assertHandle(handle, "CUSTOMER_HANDLE");
   const agent = env["CUSTOMER_AGENT"]?.trim() || handle;
-  const counterparty = env["CONTRACTOR_AGENT"]?.trim() || "agency-x-agent";
-  assertHandle(counterparty, "CONTRACTOR_AGENT");
+  const counterparty = env["CONTRACTOR_UAID"]?.trim() || env["CONTRACTOR_AGENT"]?.trim() || "agency-x-agent";
+  assertAgentRef(counterparty, env["CONTRACTOR_UAID"]?.trim() ? "CONTRACTOR_UAID" : "CONTRACTOR_AGENT");
 
   const privateKeyHex = (env["CUSTOMER_SIGNING_KEY"] ?? env["CUSTOMER_ED25519_PRIVATE_KEY"])?.trim();
   if (!privateKeyHex) {
@@ -117,13 +124,55 @@ export function loadSigningIdentity(env: NodeJS.ProcessEnv = process.env): Signi
     throw new ConfigError("CUSTOMER_SIGNING_KEY must be 32 bytes of hex (64 characters)");
   }
 
+  const publicKey = publicKeyHex(privateKeyHex);
+  const uaid = customerUaid(env, publicKey);
   return {
     handle,
     agent,
+    ...(uaid ? { uaid } : {}),
     counterparty,
     privateKeyHex,
-    publicKeyHex: publicKeyHex(privateKeyHex),
+    publicKeyHex: publicKey,
   };
+}
+
+/**
+ * The identifier the customer signs as, if it publishes one.
+ *
+ * Opt-in, unlike the contractor's: the customer's handle is what the
+ * contractor's receipts have been addressed to, and changing the string an
+ * agent signs as changes what the other side's documents say about it. `auto`
+ * derives the identifier from the signing key, which is the form a verifier can
+ * check; an explicit value is used as given and must be a well-formed
+ * identifier.
+ *
+ * @param env - Environment to read
+ * @param publicKey - The agent's Ed25519 public key, hex
+ * @returns The identifier, or undefined when the agent stays on its handle
+ * @throws ConfigError when an explicit value is not a well-formed identifier
+ */
+function customerUaid(env: NodeJS.ProcessEnv, publicKey: string): string | undefined {
+  const configured = env["CUSTOMER_UAID"]?.trim();
+  if (!configured) {
+    return undefined;
+  }
+  if (configured.toLowerCase() === "auto") {
+    return uaidFromPublicKey(publicKey, {
+      uid: "0",
+      registry: "self",
+      proto: "rest",
+      nativeId: hederaNativeId(
+        env["HEDERA_NETWORK"]?.trim() || "testnet",
+        env["CUSTOMER_ACCOUNT_ID"]?.trim() || env["PAYER_ACCOUNT_ID"]?.trim(),
+      ),
+    });
+  }
+  if (!isUaid(configured)) {
+    throw new ConfigError(
+      `CUSTOMER_UAID must be "auto" or an HCS-14 identifier like uaid:did:z6Mk…;uid=0, got "${configured}"`,
+    );
+  }
+  return configured;
 }
 
 /**
@@ -195,6 +244,30 @@ function readNetwork(env: NodeJS.ProcessEnv): HederaNetwork {
   if (raw === "testnet" || raw === "hedera:testnet") return "hedera:testnet";
   if (raw === "mainnet" || raw === "hedera:mainnet") return "hedera:mainnet";
   throw new ConfigError(`HEDERA_NETWORK must be testnet or mainnet, got "${raw}"`);
+}
+
+/**
+ * Accepts either a plain handle or an HCS-14 identifier.
+ *
+ * A counterparty may be addressed either way: by the handle it has always used,
+ * or by the identifier it publishes on its agent card. Anything that announces
+ * itself as an identifier and then fails to parse is refused rather than
+ * quietly treated as a name.
+ *
+ * @param value - Candidate reference
+ * @param name - Variable it came from, for the message
+ * @throws ConfigError when the value is neither a handle nor an identifier
+ */
+function assertAgentRef(value: string, name: string): void {
+  if (isUaid(value)) {
+    return;
+  }
+  if (value.startsWith("uaid:")) {
+    throw new ConfigError(
+      `${name} looks like an HCS-14 identifier but is not a well-formed one: "${value}"`,
+    );
+  }
+  assertHandle(value, name);
 }
 
 /**

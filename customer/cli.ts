@@ -23,6 +23,7 @@ import { envelopeHash, signEnvelope, verifyEnvelope } from "../protocol/envelope
 import { validateMandate, validatePaymentReceipt, validateReceipt } from "../protocol/schemas.js";
 import type { Envelope, Mandate, PaymentReceipt, Receipt } from "../protocol/types.js";
 import { createPaidFetch, hashscanTopicUrl, hashscanTransactionUrl, payFor } from "./pay.js";
+import { isUaid } from "../protocol/identity.js";
 import { loadCustomerConfig, type CustomerConfig, type SigningIdentity } from "./wallet.js";
 
 /** A story card as the customer's tracker exports it. */
@@ -125,7 +126,10 @@ export function buildMandateEnvelope(mandate: Mandate, identity: SigningIdentity
   return signEnvelope<Mandate>(
     {
       schema: "mandate.v1",
-      from: identity.agent,
+      // The identifier when the agent publishes one: it names the key that
+      // signs, which a handle cannot. The handle stays inside the document, in
+      // `mandate.issuer`, where the schema requires it.
+      from: identity.uaid ?? identity.agent,
       to: identity.counterparty,
       thread_id: mandate.mandate_id,
       issued_at: mandate.issued_at,
@@ -285,6 +289,55 @@ export function uuidV7(): string {
   ].join("-");
 }
 
+/** Where an agent publishes what it is; HCS-14 §"A2A Agent.json Integration". */
+export const AGENT_CARD_PATH = "/.well-known/agent.json";
+
+/** How long the customer waits for a counterparty's card before ordering without it. */
+const AGENT_CARD_TIMEOUT_MS = 3_000;
+
+/**
+ * Asks the contractor who it is, so the order can be addressed to its identifier.
+ *
+ * Best-effort by design. A card that is missing, slow, malformed or served by
+ * something that is not this contractor leaves the identity exactly as it was
+ * — the handle — and the order goes out unchanged. Discovery makes the record
+ * more precise; it is not allowed to stop an agent from working.
+ *
+ * The identifier is not trusted on sight either: it is what the order is
+ * addressed to, and whether the receipts that come back are really signed by
+ * the key behind it is settled later, by the verifier, from the receipt itself.
+ *
+ * @param base - Contractor base url
+ * @param identity - The signing identity as configured
+ * @param fetchImpl - Fetch to use; injected in tests
+ * @returns The identity, with the counterparty resolved when a card offered one
+ */
+export async function resolveCounterparty(
+  base: string,
+  identity: SigningIdentity,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SigningIdentity> {
+  if (isUaid(identity.counterparty)) {
+    return identity;
+  }
+  try {
+    const response = await fetchImpl(`${trimSlash(base)}${AGENT_CARD_PATH}`, {
+      signal: AbortSignal.timeout(AGENT_CARD_TIMEOUT_MS),
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) {
+      return identity;
+    }
+    const card = (await response.json()) as { did?: unknown };
+    if (typeof card.did === "string" && isUaid(card.did)) {
+      return { ...identity, counterparty: card.did };
+    }
+  } catch {
+    // No card, no answer, no JSON: address the contractor by handle.
+  }
+  return identity;
+}
+
 /**
  * Places an order: sign, pay the intake fee, store the acceptance.
  *
@@ -301,8 +354,9 @@ export async function runOrder(options: {
   const outDir = options.out ?? config.outDir;
 
   const story = loadStory(options.story);
-  const mandate = buildMandate(story, { issuer: config.signing.handle });
-  const envelope = buildMandateEnvelope(mandate, config.signing);
+  const identity = await resolveCounterparty(base, config.signing);
+  const mandate = buildMandate(story, { issuer: identity.handle });
+  const envelope = buildMandateEnvelope(mandate, identity);
 
   console.log(`order      ${mandate.mandate_id}`);
   console.log(`story      ${mandate.title}`);

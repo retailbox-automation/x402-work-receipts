@@ -12,23 +12,24 @@ npm run verify -- --topic 0.0.10426298 \
 
 ## A real run
 
-Against the order anchored on shared topic `0.0.10426298` on 2026-09-08:
+Against the order anchored on shared topic `0.0.10426298` on 2026-09-09:
 
 ```
-order   01a0826c-11d6-7b61-b75d-3ae618a2776a
-receipt 01a0826c-6529-7354-b656-3eb0f535486b (delivered, issued by agency-x-agent)
+order   01a0868a-954e-772c-9995-d9c5696f2ee0
+receipt 01a0868a-c20c-70ce-a983-861a808ad380 (delivered, issued by agency-x-agent)
 topic   0.0.10426298
 source  https://testnet.mirrornode.hedera.com/api/v1 (public mirror node only)
 
       check                 detail
 PASS  receipt signature     signed by 99573eae7ac7… over the receipt as issued
-PASS  mandate hash linkage  79225ab80d552f8eef6fbc57bc8ba23add91724eced2185953607546a511809a — receipt, anchor #1 and the mandate file agree
-PASS  anchor sequence       mandate_in #1 → payment_intake #2 → accepted #3 → delivered #4 → payment_balance #5 → receipt #6
-PASS  payments on ledger    intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788894509-185405540); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788894527-494125454)
-PASS  receipt anchor        8c7c94dd3029b8df236a7f8acf9aa8dabd46ec746ccf31e297dc12b742160c04 anchored at #6 (1788894537.313272104)
+PASS  agent identity        uaid:did:z6MkpmqamYik… is the key that signed this receipt (99573eae7ac7…), addressed to uaid:did:z6MkpKkccyxe…
+PASS  mandate hash linkage  6c545cc123a2a0e98f57f8f47be3510bf0e3053592e153e03747a1fe450f8587 — receipt, anchor #115 and the mandate file agree
+PASS  anchor sequence       mandate_in #115 → payment_intake #116 → accepted #117 → delivered #118 → payment_balance #119 → receipt #120
+PASS  payments on ledger    intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788963619-765994096); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788963626-820218273)
+PASS  receipt anchor        c2d75097959eef53a4eb85b2c2d36d33e9c40613388cd5b77a28ef68beb68538 anchored at #120 (1788963636.004054104)
 
 ────────────────────────────────────────────────────────────────────────────────────────
-VERIFIED — all 5 checks passed against the public record.
+VERIFIED — all 6 applicable checks passed against the public record.
 ────────────────────────────────────────────────────────────────────────────────────────
 What the chain proves (wording taken from the source spec §4.2): a sealed mandate with
 envelope hash eh existed at the sender no later than consensus time T1 and was accepted
@@ -44,26 +45,35 @@ The same receipt with its `payee` edited to an account that was never credited:
 ```
       check                 detail
 FAIL  receipt signature     the signature does not cover this document — it was edited after signing, or the key does not match
+N/A   agent identity        the receipt comes from "agency-x-agent", a handle rather than an HCS-14 identifier — it makes no identity claim to check
 PASS  mandate hash linkage  79225ab80d552f8eef6fbc57bc8ba23add91724eced2185953607546a511809a anchored at #1; no mandate file given, so the fingerprint was not recomputed
 PASS  anchor sequence       mandate_in #1 → payment_intake #2 → accepted #3 → delivered #4 → payment_balance #5 → receipt #6
-FAIL  payments on ledger    the intake payee 0.0.9999999 was not credited exactly 1000000 tinybars; the payment_intake anchor does not cover the intake payment the receipt states (anchored f9d41c01c01a…, receipt implies a65c94a16822…); …
+FAIL  payments on ledger    the intake payee 0.0.9999999 was not credited exactly 1000000 tinybars; the payment_intake anchor does not cover the intake payment the receipt states (anchored f9d41c01c01a…, receipt implies a65c94a16822…); the balance payee 0.0.9999999 was not credited exactly 4000000 tinybars; the payment_balance anchor does not cover the balance payment the receipt states (anchored 13f722391958…, receipt implies 68e3946523d1…)
 FAIL  receipt anchor        this receipt hashes to 8dce26c78858…, the topic anchored 8c7c94dd3029… at #6
 
-NOT VERIFIED — 3 of 5 checks failed: receipt signature, payments on ledger, receipt anchor.
+NOT VERIFIED — 3 of 5 checks failed: receipt signature, payments on ledger, receipt anchor. 1 had nothing to check: agent identity.
 ```
 
-## The five checks
+## The six checks
 
 | # | Check | What has to hold |
 |---|---|---|
 | 1 | `receipt signature` | the Ed25519 signature covers the receipt as issued — the document was not edited after signing |
-| 2 | `mandate hash linkage` | the receipt's `mandate_envelope_hash` equals the `mandate_in` anchor's hash, and — when the work order is supplied — equals `envelopeHash(mandate)` recomputed from it |
-| 3 | `anchor sequence` | all six steps of this order are on the topic, none twice, and they reached consensus in the order `mandate_in → payment_intake → accepted → delivered → payment_balance → receipt` |
-| 4 | `payments on ledger` | both transactions exist with `result: SUCCESS`, the payer is debited and the payee credited exactly `tinybars`, the network fee is paid by somebody other than the payer, and each `payment_*` anchor's hash equals `paymentAnchorHash` of the leg the receipt publishes |
-| 5 | `receipt anchor` | the `receipt` anchor's hash equals `envelopeHash(receipt)` — the receipt on the topic is this receipt |
+| 2 | `agent identity` | the HCS-14 identifier in the envelope's `from` decodes to the key in `sig.pub`, the `to` is well formed, and — when the work order is supplied — it came from the agent the receipt answers |
+| 3 | `mandate hash linkage` | the receipt's `mandate_envelope_hash` equals the `mandate_in` anchor's hash, and — when the work order is supplied — equals `envelopeHash(mandate)` recomputed from it |
+| 4 | `anchor sequence` | all six steps of this order are on the topic, none twice, and they reached consensus in the order `mandate_in → payment_intake → accepted → delivered → payment_balance → receipt` |
+| 5 | `payments on ledger` | both transactions exist with `result: SUCCESS`, the payer is debited and the payee credited exactly `tinybars`, the network fee is paid by somebody other than the payer, and each `payment_*` anchor's hash equals `paymentAnchorHash` of the leg the receipt publishes |
+| 6 | `receipt anchor` | the `receipt` anchor's hash equals `envelopeHash(receipt)` — the receipt on the topic is this receipt |
 
-Check 4's fee-payer condition is what stops a "payment" from being a self-transfer dressed up: under
+Check 5's fee-payer condition is what stops a "payment" from being a self-transfer dressed up: under
 the x402 `upfront` flow the facilitator pays the fee, so the fee payer is never the payer.
+
+Check 2 is the only one that can have nothing to decide, and then it prints `N/A` rather than `PASS`.
+Two cases: an envelope that carries a plain handle, which is what every receipt issued before
+identifiers existed carries; and an identifier that would have to be resolved — a `uaid:aid:`, or a
+DID of a method other than `did:key`. This command reads the public mirror node and nothing else, so
+it cannot resolve either, and a report that counted an unmade lookup as a pass would be lying about
+the one thing it exists to establish. See [`docs/extras/identity.md`](../docs/extras/identity.md).
 
 ## Three exit codes, not two
 
@@ -105,7 +115,7 @@ statement about the order. When no anchors come back, the reader confirms the to
 | File | Role |
 |---|---|
 | `cli.ts` | argument handling, loading the documents, the report, the exit codes |
-| `checks.ts` | the five checks — each a pure function over `(receipt, anchors, transactions)` |
+| `checks.ts` | the six checks — each a pure function over `(receipt, anchors, transactions)` |
 | `mirror.ts` | REST reads of the public mirror node, with pagination and retries |
 | `statement.ts` | the proves / does-not-prove wording, read from `docs/schemas/README.md` |
 
