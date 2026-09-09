@@ -90,6 +90,39 @@ export async function retainerStatus(scheduleId: string): Promise<RetainerStatus
 }
 
 /**
+ * Waits until the mirror node has indexed the schedule at all.
+ *
+ * A schedule exists on the ledger the moment its create reaches consensus, but
+ * the mirror node indexes it a second or two later and answers 404 until it
+ * does. Read once, immediately after creating one, and "not on the mirror node"
+ * comes back — which is the same answer a mistyped schedule id gives, and the
+ * opposite of what actually happened.
+ *
+ * @param scheduleId - Schedule entity id, `0.0.x`
+ * @param timeoutMs - How long to keep asking
+ * @returns The schedule, once it is visible
+ * @throws When it is still not visible when the time runs out
+ */
+export async function waitForSchedule(
+  scheduleId: string,
+  timeoutMs: number = DEFAULT_EXECUTION_TIMEOUT_MS,
+): Promise<MirrorSchedule> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const schedule = await readSchedule(scheduleId);
+    if (schedule) {
+      return schedule;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `The mirror node still does not know schedule ${scheduleId} after ${Math.round(timeoutMs / 1000)} s`,
+      );
+    }
+    await sleep(POLL_MS);
+  }
+}
+
+/**
  * Waits until the mirror node reports the execution.
  *
  * The network executes a released schedule at once, but the mirror node indexes

@@ -28,7 +28,7 @@ import {
   PrivateKey,
 } from "@hiero-ledger/sdk";
 import { operatorClient, submitAnchor } from "../anchor/client.js";
-import { loadPaymentIdentity } from "../customer/wallet.js";
+import { type HederaNetwork, loadPaymentIdentity } from "../customer/wallet.js";
 import { hashscanTransactionUrl } from "../customer/pay.js";
 import { releaseRetainer, retainerStatus, waitForExecution } from "./release.js";
 import { buildRetainerAnchor, type RetainerFacts, toMirrorScheduledTxId } from "./records.js";
@@ -43,7 +43,7 @@ const ACCOUNT_ID_PATTERN = /^0\.0\.[0-9]+$/;
 /** Everything a retainer command needs from the environment. */
 export type RetainerConfig = {
   /** CAIP-2 network, e.g. `hedera:testnet`. */
-  network: string;
+  network: HederaNetwork;
   /** Customer account and its key — the side that authorises. */
   customer: { accountId: string; privateKeyHex: string; keyType: string };
   /** Contractor account and its key — the side that releases. */
