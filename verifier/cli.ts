@@ -18,19 +18,23 @@
  */
 import { readFileSync } from "node:fs";
 import { Command } from "commander";
+import type { AnchorEntry } from "../anchor/records.js";
 import { validatePaymentReceipt } from "../protocol/schemas.js";
 import type { Envelope, Mandate, PaymentReceipt } from "../protocol/types.js";
 import {
   type CheckResult,
+  anchorsForMandate,
   paymentTransactionIds,
   runChecks,
 } from "./checks.js";
 import {
   type AnchorReader,
   type MirrorTransaction,
+  type ScheduleReader,
   type TransactionReader,
   liveMirror,
 } from "./mirror.js";
+import { type RetainerEvidence, retainerLookups } from "./retainer.js";
 import { renderStatement } from "./statement.js";
 
 /** Every check passed. */
@@ -52,10 +56,18 @@ export type VerifyRequest = {
   mandatePath?: string;
 };
 
-/** The two reads the command makes; injected so tests run offline. */
+/**
+ * The reads the command makes; injected so tests run offline.
+ *
+ * The two schedule readers are optional because most orders have no retainer
+ * and nothing asks for them. When an order *does* anchor one and no reader was
+ * supplied, the retainer check says so rather than passing quietly.
+ */
 export type VerifyDeps = {
   readAnchors: AnchorReader;
   readTransaction: TransactionReader;
+  readSchedule?: ScheduleReader;
+  readScheduledTransaction?: TransactionReader;
 };
 
 /** The outcome of one run. */
@@ -99,12 +111,14 @@ export async function verify(
   }
 
   let anchors;
+  let retainer: RetainerEvidence | undefined;
   const transactions = new Map<string, MirrorTransaction | null>();
   try {
     anchors = await deps.readAnchors(request.topicId);
     for (const transactionId of paymentTransactionIds(receipt)) {
       transactions.set(transactionId, await deps.readTransaction(transactionId));
     }
+    retainer = await readRetainer(deps, anchors, receipt.data.mandate_id);
   } catch (error) {
     // Every failure here is "I could not look", whatever its type: a mirror
     // read that did not complete says nothing about the receipt.
@@ -117,6 +131,7 @@ export async function verify(
     mandate,
     anchors,
     transactions,
+    retainer,
   });
   const passed = checks.every(check => check.ok);
 
@@ -227,6 +242,38 @@ export async function main(argv: string[] = process.argv): Promise<void> {
   const outcome = await verify(request);
   console.log(outcome.output);
   process.exitCode = outcome.code;
+}
+
+/**
+ * Reads the schedule and the transfer an order's retainer anchors point at.
+ *
+ * Nothing is fetched for the common case of an order without a retainer, and
+ * nothing is fetched when the caller supplied no schedule readers — an offline
+ * test injects only the two it needs.
+ *
+ * @param deps - The injected mirror readers
+ * @param anchors - Every anchor on the topic
+ * @param mandateId - The order being verified
+ * @returns The evidence, or undefined when there is no retainer to resolve
+ */
+async function readRetainer(
+  deps: VerifyDeps,
+  anchors: AnchorEntry[],
+  mandateId: string,
+): Promise<RetainerEvidence | undefined> {
+  const { scheduleId, releaseTransactionId } = retainerLookups(
+    anchorsForMandate(anchors, mandateId),
+  );
+  if (!scheduleId && !releaseTransactionId) {
+    return undefined;
+  }
+  if (!deps.readSchedule || !deps.readScheduledTransaction) {
+    return undefined;
+  }
+  return {
+    schedule: scheduleId ? await deps.readSchedule(scheduleId) : null,
+    release: releaseTransactionId ? await deps.readScheduledTransaction(releaseTransactionId) : null,
+  };
 }
 
 /**

@@ -12,12 +12,21 @@
  * transfers on the ledger. Nothing in this file calls the contractor or the
  * customer.
  */
-import { type AnchorEntry, type AnchorKind, toMirrorTxId } from "../anchor/records.js";
+import {
+  type AnchorEntry,
+  type AnchorKind,
+  compareConsensus,
+  toMirrorTxId,
+} from "../anchor/records.js";
 import { paymentAnchorHash } from "../contractor/receipts.js";
 import { envelopeHash, verifyEnvelope } from "../protocol/envelope.js";
 import { isUaid, publicKeyForUaid, uaidProblems } from "../protocol/identity.js";
 import type { Envelope, Mandate, Payment, PaymentLeg, PaymentReceipt } from "../protocol/types.js";
 import type { MirrorTransaction } from "./mirror.js";
+import { CHECK_RETAINER, type RetainerEvidence, checkRetainer } from "./retainer.js";
+
+export { CHECK_RETAINER } from "./retainer.js";
+export type { RetainerEvidence } from "./retainer.js";
 
 /** Check 1: the contractor really signed this receipt. */
 export const CHECK_SIGNATURE = "receipt signature";
@@ -45,9 +54,17 @@ export const CHECK_NAMES = [
   CHECK_ANCHOR_SEQUENCE,
   CHECK_PAYMENTS,
   CHECK_RECEIPT_ANCHOR,
+  CHECK_RETAINER,
 ] as const;
 
-/** The six anchors of one order, in the only order they can legitimately appear. */
+/**
+ * The six anchors every order must have, in the only order they can
+ * legitimately appear.
+ *
+ * Optional kinds — today the two `retainer_*` steps — are deliberately absent:
+ * an order without a retainer is complete, so requiring them here would fail
+ * every order that has none.
+ */
 export const EXPECTED_STEPS: AnchorKind[] = [
   "mandate_in",
   "payment_intake",
@@ -85,6 +102,8 @@ export type VerificationInput = {
   anchors: AnchorEntry[];
   /** Payment transactions, keyed by mirror-form id; null means "not on the ledger". */
   transactions: Map<string, MirrorTransaction | null>;
+  /** What the mirror node said about a retainer, when this order anchored one. */
+  retainer?: RetainerEvidence;
 };
 
 /**
@@ -131,6 +150,7 @@ export function runChecks(input: VerificationInput): CheckResult[] {
     checkAnchorSequence(input),
     checkPayments(input),
     checkReceiptAnchor(input),
+    checkRetainer(input, anchorsForMandate(input.anchors, input.receipt.data.mandate_id)),
   ];
 }
 
@@ -357,7 +377,11 @@ export function checkAnchorSequence(input: VerificationInput): CheckResult {
     return fail(CHECK_ANCHOR_SEQUENCE, `missing from the topic: ${missing.join(", ")}`);
   }
 
-  const byConsensus = [...mine].sort((left, right) =>
+  // Only the required steps take part in the ordering. An optional anchor — a
+  // retainer, say — sits between them on the topic, and comparing a sequence
+  // that includes it against one that cannot would fail an honest order.
+  const required = mine.filter(anchor => EXPECTED_STEPS.includes(anchor.kind));
+  const byConsensus = [...required].sort((left, right) =>
     compareConsensus(left.consensus_ts, right.consensus_ts),
   );
   const actual = byConsensus.map(anchor => anchor.kind);
@@ -563,26 +587,6 @@ function safeMirrorId(transactionId: string): string {
   } catch {
     return transactionId;
   }
-}
-
-/**
- * Orders two `seconds.nanoseconds` consensus timestamps.
- *
- * Compared as numbers per part rather than as strings, so nanosecond fields of
- * different lengths cannot order wrongly.
- *
- * @param left - First timestamp
- * @param right - Second timestamp
- * @returns Negative, zero or positive as usual for a comparator
- */
-function compareConsensus(left: string, right: string): number {
-  const [leftSeconds, leftNanos = "0"] = left.split(".");
-  const [rightSeconds, rightNanos = "0"] = right.split(".");
-  const seconds = Number(leftSeconds) - Number(rightSeconds);
-  if (seconds !== 0) {
-    return seconds;
-  }
-  return Number(leftNanos.padEnd(9, "0")) - Number(rightNanos.padEnd(9, "0"));
 }
 
 /**
