@@ -33,7 +33,8 @@ import type { SettleResultContext } from "@x402/core/server";
 import type { Network } from "@x402/core/types";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { canonicalize, sha256Hex } from "../protocol/canonical.js";
-import { envelopeHash, verifyEnvelope } from "../protocol/envelope.js";
+import { envelopeHash, publicKeyHex, verifyEnvelope } from "../protocol/envelope.js";
+import { hederaNativeId, uaidFromPublicKey } from "../protocol/identity.js";
 import { SchemaError, validateMandate } from "../protocol/schemas.js";
 import type { Anchor, Envelope, Mandate, Payment, PaymentLeg } from "../protocol/types.js";
 import { operatorClient, submitAnchor } from "../anchor/client.js";
@@ -60,8 +61,14 @@ export type ContractorConfig = {
   facilitatorUrl: string;
   intakeTinybars: number;
   balanceTinybars: number;
-  /** Contractor handle, used as `issuer` and as the envelope's `from`. */
+  /** Contractor handle, used as `issuer` on every receipt it signs. */
   handle: string;
+  /**
+   * The agent's HCS-14 identifier, written into the envelope's `from`.
+   * Derived from the signing key when it is not set, so a service that
+   * configures nothing still publishes an identifier a reader can check.
+   */
+  uaid?: string;
   /** Ed25519 secret key (32 bytes hex) the receipts are signed with. */
   signingKeyHex: string;
   /** Shared secret for the contractor-local delivery route. */
@@ -126,6 +133,86 @@ class AnchorFailure extends Error {
 }
 
 /**
+ * Skills this contractor claims, as HCS-14 capability enums.
+ *
+ * From the standard's tables: 4 code generation, 17 API integration, 33
+ * blockchain integration, 39 trust attestation. Skills are what an agent does,
+ * not how it is reached, which is why they and not the endpoints are the part
+ * an identifier can be derived from.
+ */
+export const CONTRACTOR_SKILLS = [4, 17, 33, 39];
+
+/** Version the service advertises for its own protocol surface. */
+export const CONTRACTOR_AGENT_VERSION = "0.0.1";
+
+/**
+ * The contractor's HCS-14 identifier.
+ *
+ * Configured explicitly, or derived from the key the service signs receipts
+ * with. Deriving it is the honest default: the identifier then cannot name a
+ * key other than the one that will appear in `sig.pub`, which is exactly what
+ * the verifier's identity check compares.
+ *
+ * @param config - Service configuration
+ * @returns The identifier, e.g. `uaid:did:z6Mk…;uid=0;registry=self;proto=rest;nativeId=hedera:testnet:0.0.5`
+ */
+export function contractorUaid(config: ContractorConfig): string {
+  if (config.uaid) {
+    return config.uaid;
+  }
+  return uaidFromPublicKey(publicKeyHex(config.signingKeyHex), {
+    uid: "0",
+    registry: "self",
+    proto: "rest",
+    nativeId: hederaNativeId(config.network, config.payTo),
+  });
+}
+
+/**
+ * The agent card the service publishes about itself.
+ *
+ * HCS-14 §"A2A Agent.json Integration" puts the identifier in the `did` field
+ * of `/.well-known/agent.json`, which is how a counterparty learns who it is
+ * addressing without being told out of band. The card also names the raw
+ * signing key: anyone can check that the key and the identifier are the same
+ * thing, and a card that quietly disagreed with itself would be caught here
+ * rather than three steps later.
+ *
+ * @param config - Service configuration
+ * @returns The card, as JSON
+ */
+export function agentCard(config: ContractorConfig): Record<string, unknown> {
+  return {
+    name: config.handle,
+    description: "Accepts signed work orders, anchors them on a public Hedera topic and returns signed receipts",
+    version: CONTRACTOR_AGENT_VERSION,
+    did: contractorUaid(config),
+    handle: config.handle,
+    signingKey: { alg: "ed25519", pub: publicKeyHex(config.signingKeyHex) },
+    skills: CONTRACTOR_SKILLS,
+    capabilities: {
+      streaming: false,
+      extensions: [
+        {
+          uri: "https://github.com/a2aproject/A2A/blob/main/docs/extensions/x402.md",
+          description: "x402 micropayment protocol",
+          required: true,
+          params: {
+            network: config.network,
+            asset: config.asset,
+            payTo: config.payTo,
+            facilitator: config.facilitatorUrl,
+            intakeTinybars: config.intakeTinybars,
+            balanceTinybars: config.balanceTinybars,
+          },
+        },
+      ],
+    },
+    audit: { topic: config.topicId },
+  };
+}
+
+/**
  * Builds the Express application.
  *
  * @param deps - Configuration and collaborators
@@ -134,6 +221,9 @@ class AnchorFailure extends Error {
 export function createContractorApp(deps: ContractorDeps): Express {
   const { config, store, settlements } = deps;
   const now = deps.now ?? (() => new Date());
+  // Who this service is, as one string, computed once: the envelopes it signs
+  // and the card it publishes must never be able to name different agents.
+  const agent = contractorUaid(config);
   const app = express();
   app.use(express.json({ limit: "256kb" }));
 
@@ -177,6 +267,12 @@ export function createContractorApp(deps: ContractorDeps): Express {
       facilitator: config.facilitatorUrl,
       prices: { intakeTinybars: config.intakeTinybars, balanceTinybars: config.balanceTinybars },
     });
+  });
+
+  // Unpaid on purpose: an agent that charges for its own name cannot be
+  // addressed by anyone who has not already met it.
+  app.get("/.well-known/agent.json", (_req, res) => {
+    res.json(agentCard(config));
   });
 
   // Contractor-local. Registered before the payment gate because the contractor
@@ -298,7 +394,7 @@ export function createContractorApp(deps: ContractorDeps): Express {
           issuedAt: now().toISOString(),
         }),
         {
-          from: config.handle,
+          from: agent,
           to: envelope.from,
           threadId: envelope.thread_id,
           privateKeyHex: config.signingKeyHex,
@@ -368,7 +464,7 @@ export function createContractorApp(deps: ContractorDeps): Express {
           payment,
         }),
         {
-          from: config.handle,
+          from: agent,
           to: job.customer,
           threadId: job.thread_id,
           privateKeyHex: config.signingKeyHex,
@@ -534,6 +630,7 @@ export function contractorConfigFromEnv(): ContractorConfig {
     // Matches the customer agent's default counterparty, so the two halves of
     // the demo address each other without either side setting a variable.
     handle: process.env.CONTRACTOR_HANDLE ?? "agency-x-agent",
+    ...(process.env.CONTRACTOR_UAID?.trim() ? { uaid: process.env.CONTRACTOR_UAID.trim() } : {}),
     signingKeyHex: requireEnv("CONTRACTOR_SIGNING_KEY"),
     deliverToken: requireEnv("CONTRACTOR_DELIVER_TOKEN"),
     port: readNumber("CONTRACTOR_PORT", 4021),
@@ -674,7 +771,7 @@ function sealRefusal(
     hint: "Send a mandate.v1 document in a signed envelope; see the schema url",
   });
   return sealReceipt(receipt, {
-    from: config.handle,
+    from: contractorUaid(config),
     // A refusal answers whoever sent the message; an unreadable envelope has no
     // usable sender, so it is addressed to nobody in particular.
     to: readSender(body),
