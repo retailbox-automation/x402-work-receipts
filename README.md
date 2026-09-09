@@ -229,6 +229,13 @@ The six anchors of that one order, in consensus order:
 | 95 | `payment_balance` | 1788897275.195562104 | [messages/95](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/95) |
 | 96 | `receipt` | 1788897276.155559129 | [messages/96](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/96) |
 
+The two schemas this run is built on are not only exercised by this demo. `mandate.v1` and `receipt.v1`
+are already exchanged in a private pilot between two companies — an agency and its client — over an
+end-to-end encrypted agent-mail transport that is not part of this repository; the first live exchange
+across the two organizations happened on 2026-09-08. What that pilot shares with this repository is the
+document shapes and nothing else: no code, no keys, no host. The partners are not named here pending
+their confirmation.
+
 ## Verifying it yourself
 
 ```bash
