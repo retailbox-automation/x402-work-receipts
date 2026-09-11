@@ -12,7 +12,10 @@ npm run verify -- --topic 0.0.10426298 \
 
 ## A real run
 
-Against the order anchored on shared topic `0.0.10426298` on 2026-09-09:
+An earlier illustrative run, not the canonical one: it is the order anchored on shared topic
+`0.0.10426298` on 2026-09-09. The canonical run the root README describes is `01a09079-…` of
+2026-09-11, placed against the hosted contractor — its full output is
+[`demo/last-run.txt`](../demo/last-run.txt).
 
 ```
 order   01a0868a-954e-772c-9995-d9c5696f2ee0
