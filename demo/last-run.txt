@@ -1,0 +1,31 @@
+$ npm run verify -- --topic 0.0.10426298 \
+    --receipt out/hosted/01a09079-548a-719d-9047-d8f4e028d126/receipt.json \
+    --mandate out/hosted/01a09079-548a-719d-9047-d8f4e028d126/mandate.json
+
+order   01a09079-548a-719d-9047-d8f4e028d126
+receipt 01a09079-8ba5-7bdc-91c3-b3f370c3ead9 (delivered, issued by agency-x-agent)
+topic   0.0.10426298
+source  https://testnet.mirrornode.hedera.com/api/v1 (public mirror node only)
+
+      check                 detail
+PASS  receipt signature     signed by 99573eae7ac7… over the receipt as issued
+PASS  agent identity        uaid:did:z6MkpmqamYik… is the key that signed this receipt (99573eae7ac7…)
+PASS  mandate hash linkage  b96c834824abf40029a34ec3bec981b2dd3d3ddf12fe98c2e8f49a89a4e4097e — receipt, anchor #148 and the mandate file agree
+PASS  anchor sequence       mandate_in #148 → payment_intake #149 → accepted #150 → delivered #151 → payment_balance #152 → receipt #153
+PASS  payments on ledger    intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1789130259-977921983); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1789130270-259648782)
+PASS  receipt anchor        4fb5278c732435c3c7f34e24874e749b7c9cb8b6e2e04a6b8cb961e4c7dd7665 anchored at #153 (1789130280.053689104)
+N/A   retainer on ledger    not applicable — this order carries no retainer anchors
+
+────────────────────────────────────────────────────────────────────────────────────────
+VERIFIED — all 6 applicable checks passed against the public record. 1 had nothing to check: retainer on ledger.
+────────────────────────────────────────────────────────────────────────────────────────
+What the chain proves (wording taken from the source spec §4.2): a sealed mandate with
+envelope hash eh existed at the sender no later than consensus time T1 and was accepted
+by the contractor, whose receipt with hash eh2 is fixed no later than T2; the
+counterparty's signature verifies independently. It does not prove the mandate's content
+(only its fingerprint), the quality or the fact of the work, or that a key belongs to a
+person. The payment profile adds: the intake and balance transfers exist on the ledger
+with the stated payer, payee and amounts.
+
+$ echo $?
+0
