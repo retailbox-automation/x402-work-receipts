@@ -1,15 +1,21 @@
 {
-  "started_at": "2026-09-08T19:54:21.990Z",
-  "finished_at": "2026-09-08T19:54:40.290Z",
+  "started_at": "2026-09-11T12:37:45.738Z",
+  "finished_at": "2026-09-11T12:37:59.845Z",
+  "contractor": {
+    "kind": "hosted",
+    "url": "https://x402-work-receipts.zeabur.app",
+    "agent_card": "https://x402-work-receipts.zeabur.app/.well-known/agent.json"
+  },
   "network": "hedera:testnet",
   "facilitator": "https://api.testnet.blocky402.com",
   "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1",
   "order": {
-    "mandate_id": "01a08295-fcca-725a-ad7e-fc9448cfa6be",
+    "mandate_id": "01a09079-548a-719d-9047-d8f4e028d126",
     "title": "Group trades by day and show the unread summary",
     "story_ref": "3f9e2a7c-1b4d-4e8f-9a6b-2c5d7e8f9a0b",
     "customer": "client-y-agent",
     "contractor": "agency-x-agent",
+    "contractor_uaid": "uaid:did:z6MkpmqamYikcwnfPSEAAUQaz8spVNEnmbHi8RL2iy28T8F6;uid=0;registry=self;proto=rest;nativeId=hedera:testnet:0.0.10365984",
     "acceptance_criteria": 4
   },
   "topic": {
@@ -21,80 +27,81 @@
       "tinybars": 1000000,
       "payer": "0.0.10365982",
       "payee": "0.0.10365984",
-      "transaction_id": "0.0.7162784@1788897257.139657829",
-      "mirror_transaction_id": "0.0.7162784-1788897257-139657829",
-      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1788897257.139657829",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788897257-139657829"
+      "transaction_id": "0.0.7162784@1789130259.977921983",
+      "mirror_transaction_id": "0.0.7162784-1789130259-977921983",
+      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1789130259.977921983",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1789130259-977921983"
     },
     "balance": {
       "tinybars": 4000000,
       "payer": "0.0.10365982",
       "payee": "0.0.10365984",
-      "transaction_id": "0.0.7162784@1788897269.019507994",
-      "mirror_transaction_id": "0.0.7162784-1788897269-019507994",
-      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1788897269.019507994",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788897269-019507994"
+      "transaction_id": "0.0.7162784@1789130270.259648782",
+      "mirror_transaction_id": "0.0.7162784-1789130270-259648782",
+      "hashscan": "https://hashscan.io/testnet/transaction/0.0.7162784@1789130270.259648782",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1789130270-259648782"
     }
   },
   "anchors": [
     {
       "kind": "mandate_in",
-      "seq": 91,
-      "consensus_ts": "1788897265.132868791",
-      "hash": "472a38aa15b3f88db253b83169bf400492f6160cda71a21060d299b72787ba2b",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/91"
+      "seq": 148,
+      "consensus_ts": "1789130267.959215104",
+      "hash": "b96c834824abf40029a34ec3bec981b2dd3d3ddf12fe98c2e8f49a89a4e4097e",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/148"
     },
     {
       "kind": "payment_intake",
-      "seq": 92,
-      "consensus_ts": "1788897266.752988458",
-      "hash": "c1740add784da348d6465110ff79abae95f25e04628122a0f25cf4bd6f6224e7",
-      "ref": "0.0.7162784-1788897257-139657829",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/92"
+      "seq": 149,
+      "consensus_ts": "1789130270.381392210",
+      "hash": "f1691c407ff63a7f67158eacaaac7302a07de1f5d97a26a2817f71a262cdd786",
+      "ref": "0.0.7162784-1789130259-977921983",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/149"
     },
     {
       "kind": "accepted",
-      "seq": 93,
-      "consensus_ts": "1788897268.858789104",
-      "hash": "f07c36bb7cef8224206aad4f4f5b4d52533c019e6c559c7d1ecaee8ac88f09e0",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/93"
+      "seq": 150,
+      "consensus_ts": "1789130272.137380616",
+      "hash": "f81a2afd1c7589dd7d94c8f9526ec2d3864ecd8042bbca78f2149e87296045e5",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/150"
     },
     {
       "kind": "delivered",
-      "seq": 94,
-      "consensus_ts": "1788897271.066457016",
-      "hash": "408dc109873998cab248d7f8d2b043124b6f22cb38a9de97832980e38f90e423",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/94"
+      "seq": 151,
+      "consensus_ts": "1789130274.140593185",
+      "hash": "fbdde1478135621973c9379ac29b0c5ceac9552af73fd9f7ae8c9a21f1e6f846",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/151"
     },
     {
       "kind": "payment_balance",
-      "seq": 95,
-      "consensus_ts": "1788897275.195562104",
-      "hash": "daf2e6a6fa29f472de28b80b22ac44a187736d05400a7470a5fd713dddc1449b",
-      "ref": "0.0.7162784-1788897269-019507994",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/95"
+      "seq": 152,
+      "consensus_ts": "1789130278.657778210",
+      "hash": "22774ce47b28476ad58c1c78f8795acadf14e9ffe18bfb0c4c314eaea8b4ffe5",
+      "ref": "0.0.7162784-1789130270-259648782",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/152"
     },
     {
       "kind": "receipt",
-      "seq": 96,
-      "consensus_ts": "1788897276.155559129",
-      "hash": "ddb1b0fa3c4bb565e093787a70637a4c81ffe3650ec0f3ee17a9236c98fb97bb",
-      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/96"
+      "seq": 153,
+      "consensus_ts": "1789130280.053689104",
+      "hash": "4fb5278c732435c3c7f34e24874e749b7c9cb8b6e2e04a6b8cb961e4c7dd7665",
+      "mirror_node": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/153"
     }
   ],
   "deliverable": {
-    "pr_url": "https://git.example.com/agency-x/client-y-web/-/merge_requests/782",
-    "staging_url": "https://staging.example-client.app/preview/fab0e26",
+    "pr_url": "https://git.example.com/agency-x/client-y-web/-/merge_requests/690",
+    "staging_url": "https://staging.example-client.app/preview/ae78ce2",
     "notion_status": "Testing"
   },
   "artifacts": {
-    "mandate": "out/demo/2026-09-08T19-54-21/01a08295-fcca-725a-ad7e-fc9448cfa6be/mandate.json",
-    "accepted": "out/demo/2026-09-08T19-54-21/01a08295-fcca-725a-ad7e-fc9448cfa6be/accepted.json",
-    "receipt": "out/demo/2026-09-08T19-54-21/01a08295-fcca-725a-ad7e-fc9448cfa6be/receipt.json"
+    "mandate": "out/hosted/01a09079-548a-719d-9047-d8f4e028d126/mandate.json",
+    "accepted": "out/hosted/01a09079-548a-719d-9047-d8f4e028d126/accepted.json",
+    "receipt": "out/hosted/01a09079-548a-719d-9047-d8f4e028d126/receipt.json"
   },
   "verification": {
     "verdict": "PASS",
     "exit_code": 0,
+    "transcript": "demo/last-run.txt",
     "checks": [
       {
         "name": "receipt signature",
@@ -102,24 +109,34 @@
         "detail": "signed by 99573eae7ac7… over the receipt as issued"
       },
       {
+        "name": "agent identity",
+        "ok": true,
+        "detail": "uaid:did:z6MkpmqamYik… is the key that signed this receipt (99573eae7ac7…)"
+      },
+      {
         "name": "mandate hash linkage",
         "ok": true,
-        "detail": "472a38aa15b3f88db253b83169bf400492f6160cda71a21060d299b72787ba2b — receipt, anchor #91 and the mandate file agree"
+        "detail": "b96c834824abf40029a34ec3bec981b2dd3d3ddf12fe98c2e8f49a89a4e4097e — receipt, anchor #148 and the mandate file agree"
       },
       {
         "name": "anchor sequence",
         "ok": true,
-        "detail": "mandate_in #91 → payment_intake #92 → accepted #93 → delivered #94 → payment_balance #95 → receipt #96"
+        "detail": "mandate_in #148 → payment_intake #149 → accepted #150 → delivered #151 → payment_balance #152 → receipt #153"
       },
       {
         "name": "payments on ledger",
         "ok": true,
-        "detail": "intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788897257-139657829); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1788897269-019507994)"
+        "detail": "intake 1000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1789130259-977921983); balance 4000000 tinybars 0.0.10365982 → 0.0.10365984 (0.0.7162784-1789130270-259648782)"
       },
       {
         "name": "receipt anchor",
         "ok": true,
-        "detail": "ddb1b0fa3c4bb565e093787a70637a4c81ffe3650ec0f3ee17a9236c98fb97bb anchored at #96 (1788897276.155559129)"
+        "detail": "4fb5278c732435c3c7f34e24874e749b7c9cb8b6e2e04a6b8cb961e4c7dd7665 anchored at #153 (1789130280.053689104)"
+      },
+      {
+        "name": "retainer on ledger",
+        "ok": null,
+        "detail": "not applicable — this order carries no retainer anchors"
       }
     ]
   }

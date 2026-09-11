@@ -177,9 +177,11 @@ The root `README.md` was updated when this lane merged: the checks table lists a
 identity` among them, and the Standards-context section describes what shipped instead of naming it
 as the next step.
 
-- `demo/last-run.json` was deliberately **not** updated by this lane, so it still records the run the
-  README's table describes — a run that predates identifiers, which is why the README shows `agent
-  identity` as `N/A` for it. The run in this document is a later one; re-run `npm run demo` and
-  update both together if the README should point at a run that shows the check passing.
+- `demo/last-run.json` was deliberately **not** updated by this lane, so at the time it still recorded
+  a run that predated identifiers and the README showed `agent identity` as `N/A`. That is no longer
+  the case: on 2026-09-11 a run against the hosted contractor (order `01a09079-…`, anchors #148–#153)
+  replaced it as the canonical one, and `agent identity` reports `PASS` there — see
+  [`demo/last-run.txt`](../../demo/last-run.txt) for the verifier's output on it. The run in this
+  document remains an earlier illustrative one.
 - `docs/schemas/*` and the proves/does-not-prove statement were not touched. They are copies of an
   upstream protocol, and this extra adds no claim about what the chain proves.

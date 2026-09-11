@@ -19,8 +19,10 @@ on a Hedera consensus topic, and returns a signed acceptance naming the criteria
 work exists, the customer pays the balance and collects a signed delivery receipt carrying both payments.
 Six anchors go on the topic; not one of them carries content, only hashes. Anyone can then run the
 verifier with a topic id and a receipt file and reach the same verdict either party would — reading the
-public mirror node and nothing else. What that proves, and what it deliberately does not, is stated
-below in the same words the verifier prints on every run.
+public mirror node and nothing else. The verifier's subject is narrow and deliberately so: it decides
+about a `receipt.v1` document from this protocol, optionally carrying the `payment.v1` profile, and it
+checks no other kind of document. What that proves, and what it deliberately does not, is stated below
+in the same words the verifier prints on every run.
 
 ## Setup
 
@@ -78,7 +80,7 @@ funded testnet payer and payee.
 | `CUSTOMER_MAX_TINYBARS_PER_PAYMENT` | `5000000` | Client-side ceiling; a larger quote is refused before anything is signed |
 | `X402_FACILITATOR_URL` | `https://api.testnet.blocky402.com` | The facilitator that verifies and settles |
 | `X402_NETWORK` | `hedera:testnet` | CAIP-2 network payments settle on |
-| `X402_ASSET` | `0.0.0` | `0.0.0` is HBAR; anything else is an HTS token id |
+| `X402_ASSET` | `0.0.0` | `0.0.0` is HBAR; anything else is an HTS token id. HBAR is what every run here settled in — an HTS asset is supported by the scheme and the code path, but was not demonstrated |
 | `HEDERA_NETWORK` | `testnet` | Network the customer agent pays on |
 | `HEDERA_MIRROR_NODE_URL` | `https://testnet.mirrornode.hedera.com` | Mirror node the **contractor** reads its own anchors back from |
 | `ANCHOR_MIRROR_TIMEOUT_MS` | `30000` | How long the contractor waits for the mirror node to catch up |
@@ -147,6 +149,21 @@ Source: [`docs/diagrams/flow.mmd`](docs/diagrams/flow.mmd).
 
 ## Payment flow
 
+**Discovery: a url is the whole integration.** The contractor publishes an agent card at
+`GET /.well-known/agent.json` — live at
+[`https://x402-work-receipts.zeabur.app/.well-known/agent.json`](https://x402-work-receipts.zeabur.app/.well-known/agent.json).
+The card (built in [`contractor/server.ts`](contractor/server.ts), `agentCard`) names the service's
+handle and description, its HCS-14 identifier in the `did` field, the raw Ed25519 public key it signs
+receipts with, the skills it claims as HCS-14 capability enums, the audit topic it anchors to, and an
+x402 extension carrying the network, asset, `payTo` account, facilitator url and both prices in
+tinybars. A customer agent given nothing but the base url reads that card
+([`customer/cli.ts`](customer/cli.ts), `resolveCounterparty`), addresses its order to the identifier it
+found rather than to a handle, and pays — **there is no API key, no account to register and no
+credential to exchange.** The `402` response carries the quote; the payment is the authentication.
+Reading the card is best effort: if it is missing or slow the order still goes out under a plain
+handle, and nothing in the card is trusted on sight — whether receipts really come from that key is
+settled afterwards by the verifier, from the receipt itself.
+
 Both paid routes speak x402 with the `exact` scheme on `hedera:testnet`, settled by the
 Blocky402 facilitator at `https://api.testnet.blocky402.com`. The customer opts HBAR into its spend
 controls explicitly and sets a per-payment ceiling, so a service that quotes more than it should is
@@ -208,26 +225,30 @@ protocol spec §4.2 — and which the verifier reads from that file and prints o
 
 ## A real run
 
-Every id below is from the run recorded in [`demo/last-run.json`](demo/last-run.json) — order
-`01a08295-fcca-725a-ad7e-fc9448cfa6be`, 2026-09-08, Hedera testnet.
+Every id below is from the run recorded in [`demo/last-run.json`](demo/last-run.json), with the
+verifier's own output beside it in [`demo/last-run.txt`](demo/last-run.txt) — order
+`01a09079-548a-719d-9047-d8f4e028d126`, 2026-09-11, Hedera testnet. It was placed from a laptop
+**against the hosted contractor at `https://x402-work-receipts.zeabur.app`**, not against a local
+process: the same url anyone reading this can order from.
 
 | What | Where |
 |---|---|
 | Audit topic | [`0.0.10426298`](https://hashscan.io/testnet/topic/0.0.10426298) |
-| Intake payment, 1 000 000 tinybars | [`0.0.7162784@1788897257.139657829`](https://hashscan.io/testnet/transaction/0.0.7162784@1788897257.139657829) |
-| Balance payment, 4 000 000 tinybars | [`0.0.7162784@1788897269.019507994`](https://hashscan.io/testnet/transaction/0.0.7162784@1788897269.019507994) |
+| Intake payment, 1 000 000 tinybars | [`0.0.7162784@1789130259.977921983`](https://hashscan.io/testnet/transaction/0.0.7162784@1789130259.977921983) |
+| Balance payment, 4 000 000 tinybars | [`0.0.7162784@1789130270.259648782`](https://hashscan.io/testnet/transaction/0.0.7162784@1789130270.259648782) |
 | Payer → payee | `0.0.10365982` → `0.0.10365984`, network fee paid by the facilitator `0.0.7162784` |
+| Verifier verdict | `VERIFIED` — all 6 applicable checks passed, 1 `N/A` (exit `0`) |
 
 The six anchors of that one order, in consensus order:
 
 | # | Kind | Consensus timestamp | Message |
 |---|---|---|---|
-| 91 | `mandate_in` | 1788897265.132868791 | [messages/91](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/91) |
-| 92 | `payment_intake` | 1788897266.752988458 | [messages/92](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/92) |
-| 93 | `accepted` | 1788897268.858789104 | [messages/93](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/93) |
-| 94 | `delivered` | 1788897271.066457016 | [messages/94](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/94) |
-| 95 | `payment_balance` | 1788897275.195562104 | [messages/95](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/95) |
-| 96 | `receipt` | 1788897276.155559129 | [messages/96](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/96) |
+| 148 | `mandate_in` | 1789130267.959215104 | [messages/148](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/148) |
+| 149 | `payment_intake` | 1789130270.381392210 | [messages/149](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/149) |
+| 150 | `accepted` | 1789130272.137380616 | [messages/150](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/150) |
+| 151 | `delivered` | 1789130274.140593185 | [messages/151](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/151) |
+| 152 | `payment_balance` | 1789130278.657778210 | [messages/152](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/152) |
+| 153 | `receipt` | 1789130280.053689104 | [messages/153](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10426298/messages/153) |
 
 The two schemas this run is built on are not only exercised by this demo. `mandate.v1` and `receipt.v1`
 are already exchanged in a private pilot between two companies — an agency and its client — over an
@@ -240,27 +261,30 @@ their confirmation.
 
 ```bash
 npm run verify -- --topic 0.0.10426298 \
-  --receipt out/demo/<run>/<mandate_id>/receipt.json \
-  --mandate out/demo/<run>/<mandate_id>/mandate.json
+  --receipt out/hosted/<mandate_id>/receipt.json \
+  --mandate out/hosted/<mandate_id>/mandate.json
 ```
 
-The `--mandate` file is optional: without it the verifier still checks that the receipt points at the
-fingerprint the topic recorded; with it, it recomputes that fingerprint from the work order itself. Exit
-codes are three, not two — `0` verified, `1` a check failed, `2` the check could not be completed —
-because "this receipt does not hold up" and "I could not look" must never arrive as the same answer.
+What it accepts is one `receipt.v1` document from this protocol, with or without the `payment.v1`
+profile — not an arbitrary receipt from somewhere else. The `--mandate` file is optional: without it the
+verifier still checks that the receipt points at the fingerprint the topic recorded; with it, it
+recomputes that fingerprint from the work order itself. Exit codes are three, not two — `0` verified,
+`1` a check failed, `2` the check could not be completed — because "this receipt does not hold up" and
+"I could not look" must never arrive as the same answer.
 
-These are the seven checks, with the verdicts from the run above. Two of them can have nothing to
-decide, and then they print `N/A` rather than `PASS` — the report says what the evidence
-establishes, and "the document made no such claim" is not the same statement as "the claim holds":
+These are the seven checks, with the verdicts from the run above ([`demo/last-run.txt`](demo/last-run.txt)
+is that output verbatim). Two of them can have nothing to decide, and then they print `N/A` rather than
+`PASS` — the report says what the evidence establishes, and "the document made no such claim" is not the
+same statement as "the claim holds":
 
 | Check | What it establishes | Verdict |
 |---|---|---|
 | `receipt signature` | The receipt verifies against the key it carries, over its bytes as issued | PASS — signed by `99573eae7ac7…` |
-| `agent identity` | The HCS-14 identifier in the envelope decodes to the key that signed the receipt | N/A — this run predates identifiers, so its envelopes carry plain handles ([`docs/extras/identity.md`](docs/extras/identity.md)) |
-| `mandate hash linkage` | The receipt, the `mandate_in` anchor and the work-order file name the same fingerprint | PASS — `472a38aa…` in all three |
-| `anchor sequence` | All six anchors exist for this order, in the right order, ascending by consensus | PASS — #91 → #96 |
+| `agent identity` | The HCS-14 identifier in the envelope decodes to the key that signed the receipt | PASS — `uaid:did:z6MkpmqamYik…` is that key ([`docs/extras/identity.md`](docs/extras/identity.md)) |
+| `mandate hash linkage` | The receipt, the `mandate_in` anchor and the work-order file name the same fingerprint | PASS — `b96c8348…` in all three |
+| `anchor sequence` | All six anchors exist for this order, in the right order, ascending by consensus | PASS — #148 → #153 |
 | `payments on ledger` | Both transfers are on chain with the stated payer, payee and amounts, and the fee payer is neither | PASS — 1 000 000 and 4 000 000 tinybars |
-| `receipt anchor` | The receipt's own hash is the one the topic recorded | PASS — `ddb1b0fa…` at #96 |
+| `receipt anchor` | The receipt's own hash is the one the topic recorded | PASS — `4fb5278c…` at #153 |
 | `retainer on ledger` | When the order anchored a retainer: the schedule, the transfer it executed, and a release that came after delivery | N/A — this order has no retainer ([`docs/extras/retainer.md`](docs/extras/retainer.md)) |
 
 The verifier talks to nobody but `https://testnet.mirrornode.hedera.com/api/v1`. It never calls the
@@ -281,7 +305,8 @@ contractor or the customer, holds no keys, and cannot write anything.
   — aggregation.** A published methodology for turning many such signals into an AI Trust Score
   (engine in `standards-sdk` [#178](https://github.com/hashgraph-online/standards-sdk/pull/178), signal
   catalogue in [#179](https://github.com/hashgraph-online/standards-sdk/pull/179)). Receipts like these
-  are exactly the kind of countable, independently checkable evidence such a score wants as an input.
+  could serve as one input to such a score — they are countable and independently checkable. Whether
+  they match a signal in that catalogue has not been checked here.
 
 **The score is not used as a gate here, and this project does not compute one.** HCS-25 says so itself —
 a trust score must not be the sole authoritative basis for irreversible gating — and the check that
@@ -317,9 +342,7 @@ window, which opened 2026-09-04 12:00 EDT. The commit history starts there.
 
 What the extras above do not cover, in order of how soon each is coming:
 
-- **A contribution to `hedera-dev/hedera-harness`** — a deterministic mirror-node check for its `CHAIN`
-  step, as a PR against the `dev` branch. Scoped, not started; separate repository, separate prize
-  category from the flow above.
+- A contribution to the Hedera Harness is being opened alongside this submission: <!-- HARNESS_PR_URL -->
 - **A custom fee on the anchor topic (HIP-991)**, so a shared audit register could fund its own
   operation. Timeboxed as an experiment, not committed: it changes the topic's submit path, and whether
   `submitAnchor` still works through it is genuinely unverified.
