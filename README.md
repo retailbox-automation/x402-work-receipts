@@ -342,7 +342,7 @@ window, which opened 2026-09-04 12:00 EDT. The commit history starts there.
 
 What the extras above do not cover, in order of how soon each is coming:
 
-- A contribution to the Hedera Harness is being opened alongside this submission: <!-- HARNESS_PR_URL -->
+- A contribution to the Hedera Harness is being opened alongside this submission: [hedera-dev/hedera-harness#60](https://github.com/hedera-dev/hedera-harness/pull/60) (report misspelled recipe keys instead of defaulting silently; open against `dev`)
 - **A custom fee on the anchor topic (HIP-991)**, so a shared audit register could fund its own
   operation. Timeboxed as an experiment, not committed: it changes the topic's submit path, and whether
   `submitAnchor` still works through it is genuinely unverified.
