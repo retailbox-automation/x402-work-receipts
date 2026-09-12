@@ -28,6 +28,7 @@ import {
   runChecks,
 } from "./checks.js";
 import {
+  MIRROR_NODE_URL,
   type AnchorReader,
   type MirrorTransaction,
   type ScheduleReader,
@@ -49,11 +50,39 @@ export const EXIT_ERROR = 2;
 /** Width the report is wrapped to. */
 const REPORT_WIDTH = 88;
 
-/** What to verify. */
+/** What to verify, as files on disk. */
 export type VerifyRequest = {
   topicId: string;
   receiptPath: string;
   mandatePath?: string;
+};
+
+/**
+ * What to verify, as documents that have already been parsed.
+ *
+ * The command reads files; a caller that already holds the envelopes — an HTTP
+ * route handed them in a request body, a test holding fixtures — has nothing to
+ * read and should not have to write a temporary file to be allowed to verify.
+ */
+export type VerifyDocumentsRequest = {
+  topicId: string;
+  receipt: Envelope<PaymentReceipt>;
+  mandate?: Envelope<Mandate>;
+};
+
+/**
+ * Where a reader can go and see each piece of evidence for themselves.
+ *
+ * Nothing here is evidence: these are pointers at the public record the checks
+ * were decided from, so that a verdict is not the last word but the first one.
+ * Anchors point at the mirror node's own message endpoint, which addresses a
+ * single sequence number; HashScan has no per-message url, so the topic as a
+ * whole is linked there instead.
+ */
+export type VerifyLinks = {
+  topic: { id: string; url: string };
+  anchors: { seq: number; kind: string; consensus_ts: string; url: string }[];
+  transactions: { id: string; url: string }[];
 };
 
 /**
@@ -75,13 +104,15 @@ export type VerifyOutcome = {
   code: number;
   checks: CheckResult[];
   output: string;
+  /** Pointers at the public record; absent when no check was reached. */
+  links?: VerifyLinks;
 };
 
 /** Reading the real, public mirror node. */
 export const liveDeps: VerifyDeps = liveMirror;
 
-/** A file that could not be read or is not the document it should be. */
-class InputError extends Error {}
+/** A document that could not be read or is not the document it should be. */
+export class InputError extends Error {}
 
 /**
  * Verifies one receipt against the public record.
@@ -110,11 +141,32 @@ export async function verify(
     return errorOutcome(`Could not read the work order: ${describe(error)}`);
   }
 
+  return verifyDocuments({ topicId: request.topicId, receipt, mandate }, deps);
+}
+
+/**
+ * Verifies documents that are already parsed against the public record.
+ *
+ * This is the whole of verification; {@link verify} is this function with file
+ * reading in front of it. Everything it trusts arrives through `deps`, and the
+ * default `deps` read nothing but the public mirror node — so a caller cannot
+ * widen what a verdict is based on by calling this instead of the command.
+ *
+ * @param request - Topic, receipt and optional work order
+ * @param deps - Mirror readers; the live ones by default
+ * @returns Exit code, the individual verdicts, the printable report and links
+ */
+export async function verifyDocuments(
+  request: VerifyDocumentsRequest,
+  deps: VerifyDeps = liveDeps,
+): Promise<VerifyOutcome> {
+  const { topicId, receipt, mandate } = request;
+
   let anchors;
   let retainer: RetainerEvidence | undefined;
   const transactions = new Map<string, MirrorTransaction | null>();
   try {
-    anchors = await deps.readAnchors(request.topicId);
+    anchors = await deps.readAnchors(topicId);
     for (const transactionId of paymentTransactionIds(receipt)) {
       transactions.set(transactionId, await deps.readTransaction(transactionId));
     }
@@ -126,7 +178,7 @@ export async function verify(
   }
 
   const checks = runChecks({
-    topicId: request.topicId,
+    topicId,
     receipt,
     mandate,
     anchors,
@@ -138,8 +190,48 @@ export async function verify(
   return {
     code: passed ? EXIT_OK : EXIT_FAILED,
     checks,
-    output: report(request, receipt, checks, passed),
+    output: report(topicId, receipt, checks, passed),
+    links: buildLinks(topicId, receipt, anchors),
   };
+}
+
+/**
+ * Reads a signed delivery receipt from a parsed value.
+ *
+ * @param value - Parsed JSON, from a file or a request body
+ * @param label - How to name it in an error, e.g. a path
+ * @returns The envelope
+ * @throws {InputError} When the value is not a valid receipt envelope
+ */
+export function parseReceipt(value: unknown, label = "the receipt"): Envelope<PaymentReceipt> {
+  const envelope = asEnvelope(value, label);
+  if (envelope.schema !== "receipt.v1+payment.v1") {
+    throw new InputError(
+      `${label} is a "${envelope.schema}" envelope; verification needs a receipt.v1+payment.v1 receipt`,
+    );
+  }
+  try {
+    validatePaymentReceipt(envelope.data);
+  } catch (error) {
+    throw new InputError(`${label} is not a valid receipt: ${describe(error)}`);
+  }
+  return envelope as Envelope<PaymentReceipt>;
+}
+
+/**
+ * Reads a signed work order from a parsed value.
+ *
+ * @param value - Parsed JSON, from a file or a request body
+ * @param label - How to name it in an error, e.g. a path
+ * @returns The envelope
+ * @throws {InputError} When the value is not a mandate envelope
+ */
+export function parseMandate(value: unknown, label = "the work order"): Envelope<Mandate> {
+  const envelope = asEnvelope(value, label);
+  if (envelope.schema !== "mandate.v1") {
+    throw new InputError(`${label} is a "${envelope.schema}" envelope, not a mandate.v1 work order`);
+  }
+  return envelope as Envelope<Mandate>;
 }
 
 /**
@@ -150,18 +242,7 @@ export async function verify(
  * @throws {InputError} When the file is missing, unparsable or not a receipt
  */
 export function loadReceipt(path: string): Envelope<PaymentReceipt> {
-  const envelope = loadEnvelope(path);
-  if (envelope.schema !== "receipt.v1+payment.v1") {
-    throw new InputError(
-      `${path} is a "${envelope.schema}" envelope; verification needs a receipt.v1+payment.v1 receipt`,
-    );
-  }
-  try {
-    validatePaymentReceipt(envelope.data);
-  } catch (error) {
-    throw new InputError(`${path} is not a valid receipt: ${describe(error)}`);
-  }
-  return envelope as Envelope<PaymentReceipt>;
+  return parseReceipt(readJsonFile(path), path);
 }
 
 /**
@@ -172,11 +253,7 @@ export function loadReceipt(path: string): Envelope<PaymentReceipt> {
  * @throws {InputError} When the file is missing, unparsable or not a mandate
  */
 export function loadMandate(path: string): Envelope<Mandate> {
-  const envelope = loadEnvelope(path);
-  if (envelope.schema !== "mandate.v1") {
-    throw new InputError(`${path} is a "${envelope.schema}" envelope, not a mandate.v1 work order`);
-  }
-  return envelope as Envelope<Mandate>;
+  return parseMandate(readJsonFile(path), path);
 }
 
 /**
@@ -277,13 +354,13 @@ async function readRetainer(
 }
 
 /**
- * Reads and parses any signed envelope.
+ * Reads and parses a JSON file.
  *
  * @param path - Path to the file
- * @returns The envelope
- * @throws {InputError} When the file is missing, unparsable or not an envelope
+ * @returns The parsed value
+ * @throws {InputError} When the file is missing or is not JSON
  */
-function loadEnvelope(path: string): Envelope<unknown> {
+function readJsonFile(path: string): unknown {
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
@@ -291,39 +368,71 @@ function loadEnvelope(path: string): Envelope<unknown> {
     throw new InputError(`cannot open ${path} (${describe(error)})`);
   }
 
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    return JSON.parse(raw);
   } catch (error) {
     throw new InputError(`${path} is not JSON (${describe(error)})`);
   }
+}
 
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new InputError(`${path} does not hold a signed envelope`);
+/**
+ * Checks that a parsed value has the shape of a signed envelope.
+ *
+ * @param value - The parsed value
+ * @param label - How to name it in an error
+ * @returns The envelope
+ * @throws {InputError} When it is not an envelope
+ */
+function asEnvelope(value: unknown, label: string): Envelope<unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new InputError(`${label} does not hold a signed envelope`);
   }
-  const envelope = parsed as Partial<Envelope<unknown>>;
+  const envelope = value as Partial<Envelope<unknown>>;
   if (typeof envelope.schema !== "string" || envelope.data === undefined || !envelope.sig) {
-    throw new InputError(`${path} does not hold a signed envelope`);
+    throw new InputError(`${label} does not hold a signed envelope`);
   }
   return envelope as Envelope<unknown>;
 }
 
 /**
- * The printable report: what was checked, the verdicts, then the statement.
+ * Pointers at the public record a verdict was read from.
  *
- * @param request - What was asked for
+ * @param topicId - The audit topic
  * @param receipt - The receipt under examination
+ * @param anchors - Every anchor on the topic
+ * @returns Links for the topic, this order's anchors and each payment
+ */
+function buildLinks(
+  topicId: string,
+  receipt: Envelope<PaymentReceipt>,
+  anchors: AnchorEntry[],
+): VerifyLinks {
+  const payment = receipt.data.payment;
+  const legs = [payment?.intake?.transaction_id, payment?.balance?.transaction_id].filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  return {
+    topic: { id: topicId, url: `https://hashscan.io/testnet/topic/${topicId}` },
+    anchors: anchorsForMandate(anchors, receipt.data.mandate_id).map(entry => ({
+      seq: entry.seq,
+      kind: entry.kind,
+      consensus_ts: entry.consensus_ts,
+      url: `${MIRROR_NODE_URL}/api/v1/topics/${topicId}/messages/${entry.seq}`,
+    })),
+    // The facilitator form is the one HashScan resolves, so the id is shown and
+    // linked exactly as the receipt carries it.
+    transactions: legs.map(id => ({ id, url: `https://hashscan.io/testnet/transaction/${id}` })),
+  };
+}
+
+/**
+ * The one-line verdict: what passed, what failed and what was never examined.
+ *
  * @param checks - The verdicts
  * @param passed - Whether every check passed
- * @returns The report
+ * @returns The verdict as one line
  */
-function report(
-  request: VerifyRequest,
-  receipt: Envelope<PaymentReceipt>,
-  checks: CheckResult[],
-  passed: boolean,
-): string {
-  const rule = "─".repeat(REPORT_WIDTH);
+export function verdictLine(checks: CheckResult[], passed: boolean): string {
   const failed = checks.filter(check => !check.ok);
   const skipped = checks.filter(check => check.applicable === false);
   const ran = checks.length - skipped.length;
@@ -331,16 +440,35 @@ function report(
     skipped.length === 0
       ? ""
       : ` ${skipped.length} had nothing to check: ${skipped.map(check => check.name).join(", ")}.`;
-  const verdict = passed
+  return passed
     ? `VERIFIED — all ${ran} applicable checks passed against the public record.${aside}`
     : `NOT VERIFIED — ${failed.length} of ${ran} checks failed: ${failed
         .map(check => check.name)
         .join(", ")}.${aside}`;
+}
+
+/**
+ * The printable report: what was checked, the verdicts, then the statement.
+ *
+ * @param topicId - The audit topic the anchors were read from
+ * @param receipt - The receipt under examination
+ * @param checks - The verdicts
+ * @param passed - Whether every check passed
+ * @returns The report
+ */
+function report(
+  topicId: string,
+  receipt: Envelope<PaymentReceipt>,
+  checks: CheckResult[],
+  passed: boolean,
+): string {
+  const rule = "─".repeat(REPORT_WIDTH);
+  const verdict = verdictLine(checks, passed);
 
   return [
     `order   ${receipt.data.mandate_id}`,
     `receipt ${receipt.data.receipt_id} (${receipt.data.kind}, issued by ${receipt.data.issuer})`,
-    `topic   ${request.topicId}`,
+    `topic   ${topicId}`,
     `source  ${MIRROR_LABEL}`,
     "",
     renderTable(checks),

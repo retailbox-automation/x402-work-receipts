@@ -259,6 +259,24 @@ their confirmation.
 
 ## Verifying it yourself
 
+### In the browser, with nothing installed
+
+Open **<https://x402-work-receipts.zeabur.app/verify>**, press **Load the demo run**, then **Verify**.
+The button fills the form with the two documents a customer kept from a real hosted order
+(`01a09578-9b95-7262-a5b9-84bda0ad65cf`, bundled at
+[`demo/fixtures/hosted-run-2026-09-12/`](demo/fixtures/hosted-run-2026-09-12/)), and the page answers
+with the same table of checks, the same verdict line and the same statement the command below prints —
+plus links to the topic, to each of that order's anchors on the mirror node, and to both payments on
+HashScan. You can paste somebody else's receipt into it instead; a work order is optional either way.
+
+That page is served by the contractor, so it is worth being precise about what it is allowed to know:
+the handler runs the same `verifyDocuments` the command runs, against the public mirror node and
+nothing else. It never consults the job store of the service issuing the receipts, it keeps no document
+you paste, and it prints the equivalent `npm run verify` command beside every verdict — because the
+answer to "why should I trust your website" has to be something you can run without it.
+
+### From a terminal
+
 ```bash
 npm run verify -- --topic 0.0.10426298 \
   --receipt out/hosted/<mandate_id>/receipt.json \
@@ -353,8 +371,9 @@ What the extras above do not cover, in order of how soon each is coming:
 Where it goes: agencies and their clients already exchange work orders and sign-offs — in trackers, in
 chat, in invoices — and already argue about what was agreed. The pieces that make this saleable are not
 the ledger but the boring ones around it: an adapter per tracker, a receipt a finance team can attach to
-an invoice, and a verifier a client can run without installing anything. The ledger is the part that
-stops the argument, and it is deliberately the replaceable part.
+an invoice, and a verifier a client can run without installing anything — that last one is now live at
+[`/verify`](https://x402-work-receipts.zeabur.app/verify). The ledger is the part that stops the
+argument, and it is deliberately the replaceable part.
 
 ## License
 
