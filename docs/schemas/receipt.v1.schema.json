@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2a.getaim.ai/schemas/receipt.v1.schema.json",
+  "$id": "https://api.contessera.ai/schemas/receipt.v1.schema.json",
   "title": "receipt.v1",
   "description": "Receipt from a contractor agent to a customer agent. `kind=accepted` — issued on intake of a mandate; `kind=delivered` — on completion, with links to the result; `kind=rejected` — a formal refusal: what arrived is not this pair's mandate format, or is not valid. It points at the recorded intake: `mandate_envelope_hash` is the sha256 of the canonical form (RFC 8785) of the mandate envelope as signed (ciphertext plus signature).",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2a.getaim.ai/schemas/mandate.v1.schema.json",
+  "$id": "https://api.contessera.ai/schemas/mandate.v1.schema.json",
   "title": "mandate.v1",
   "description": "Work order from a customer agent to a contractor agent: one story out of the customer's tracker, carrying no money and no hours. Application layer inside the transport envelope's `data` field; the envelope's schema tag is `mandate.v1`; the reply arrives in the mandate's `thread_id`.",
   "type": "object",
