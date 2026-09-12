@@ -14,8 +14,8 @@
 
 | Copied file | Source path in the protocol repository | Source commit | Copied on | sha256 of the copy |
 |---|---|---|---|---|
-| `mandate.v1.schema.json` | `docs/schemas/mandate.v1.schema.json` | branch `lane-schemas-public`, `c321bc0` (2026-09-12) | 2026-09-12 | `c89c18421e84e83e733f887caf936fbca32afbeb09315362f18cb8fa01fb74ba` |
-| `receipt.v1.schema.json` | `docs/schemas/receipt.v1.schema.json` | branch `lane-schemas-public`, `c321bc0` (2026-09-12) | 2026-09-12 | `8a8f3c3e3dc0ba705107970b61c0605fefe3411f85fa8f099d615463286f27d0` |
+| `mandate.v1.schema.json` | `docs/schemas/mandate.v1.schema.json` | protocol source commit `c321bc0` (2026-09-12) | 2026-09-12 | `c89c18421e84e83e733f887caf936fbca32afbeb09315362f18cb8fa01fb74ba` |
+| `receipt.v1.schema.json` | `docs/schemas/receipt.v1.schema.json` | protocol source commit `c321bc0` (2026-09-12) | 2026-09-12 | `8a8f3c3e3dc0ba705107970b61c0605fefe3411f85fa8f099d615463286f27d0` |
 
 These rows replace the 2026-09-04 and 2026-09-07 copies, whose digests were dae0c1e1… (mandate, source
 commit 0885247) and 41216294… (receipt, source commit 56e8075); the full values stay in this file's git
