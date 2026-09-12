@@ -316,10 +316,13 @@ public record.
 ## AI collaboration
 
 Claude Code was used throughout, and the artifacts that drove it are in the repository rather than in a
-chat log: [`docs/specs/2026-09-04-work-order-receipts-design.md`](docs/specs/2026-09-04-work-order-receipts-design.md)
+chat log: [`HACKATHON-PRD.md`](HACKATHON-PRD.md) (the planning document the build was scoped against),
+[`docs/specs/2026-09-04-work-order-receipts-design.md`](docs/specs/2026-09-04-work-order-receipts-design.md)
 (the design), [`docs/plans/2026-09-04-implementation-plan.md`](docs/plans/2026-09-04-implementation-plan.md)
 (the task-by-task plan each piece was built from, including its interfaces and acceptance criteria), and
-[`spike/`](spike/) (the first real payment, with the gotchas that shaped everything after it).
+[`spike/`](spike/) (the first real payment, with the gotchas that shaped everything after it). There are
+no raw prompt logs to publish; the planning artifacts are the PRD, the design, and the per-task plan with
+its acceptance criteria.
 
 Written with it: the modules under `protocol/`, `anchor/`, `contractor/`, `customer/`, `verifier/` and
 `demo/`, their test suites, and this documentation. Reviewed, run and merged by hand — every task was

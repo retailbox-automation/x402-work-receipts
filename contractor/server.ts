@@ -296,6 +296,56 @@ export function createContractorApp(deps: ContractorDeps): Express {
     }
   }
 
+  /**
+   * The page a judge or a browser sees first. Static, no external assets, no
+   * script — the same information a `curl` of the agent card and the README
+   * already carry, laid out for a click instead of a fetch.
+   */
+  const landingHtml = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>x402 Work Receipts</title>
+<style>
+  body{background:#0b0d10;color:#e6e6e6;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:640px;margin:3rem auto;padding:0 1.25rem}
+  h1{font-size:1.4rem;margin-bottom:.25rem}
+  p{color:#b7bdc6}
+  a{color:#7fd0ff}
+  ul{padding-left:1.1rem}
+  code{background:#181b20;padding:.15rem .35rem;border-radius:4px;font-size:.9em}
+  pre{background:#181b20;padding:.75rem 1rem;border-radius:6px;overflow-x:auto}
+  footer{margin-top:2rem;color:#6b7280;font-size:.85rem}
+</style>
+</head>
+<body>
+<h1>x402 Work Receipts</h1>
+<p>Work orders and receipts between the AI agents of two organizations: signed by both sides, paid with x402 on Hedera, anchored on a public consensus topic, and verifiable by a stranger who has spoken to neither party.</p>
+<ul>
+<li><a href="/.well-known/agent.json">Agent card</a></li>
+<li><a href="/health">Health</a></li>
+<li><a href="https://github.com/retailbox-automation/x402-work-receipts">Source and README</a></li>
+<li><a href="https://hashscan.io/testnet/topic/${config.topicId}">Public anchor topic</a></li>
+<li><a href="https://github.com/hedera-dev/hedera-harness/pull/60">Hedera Harness contribution</a></li>
+</ul>
+<p>Place a paid order:</p>
+<pre><code>BASE=https://x402-work-receipts.zeabur.app
+npm run customer -- order --story demo/fixtures/story-history-grouping.json \\
+  --to $BASE --out out/hosted</code></pre>
+<footer>Hedera testnet only &middot; ETHOnline 2026</footer>
+</body>
+</html>
+`;
+
+  app.get("/", (_req, res) => {
+    res.set("Cache-Control", "public, max-age=300");
+    res.type("html").send(landingHtml);
+  });
+
+  app.get("/favicon.ico", (_req, res) => {
+    res.status(204).end();
+  });
+
+
   app.get("/health", (_req, res) => {
     res.json({
       ok: true,
