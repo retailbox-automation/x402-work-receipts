@@ -289,3 +289,50 @@ describe("what the responses say about the software", () => {
     }
   });
 });
+
+describe("the landing page", () => {
+  let server: Server;
+  let baseUrl: string;
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = mkdtempSync(join(tmpdir(), "contractor-hardening-root-"));
+    const app = createContractorApp({
+      config: config(),
+      store: JobStore.open(join(dir, "jobs.json")),
+      anchors: anchorStub().write,
+      settlements: { claim: () => undefined },
+      paymentGate: (_req, _res, next) => next(),
+    });
+    const running = await listen(app);
+    server = running.server;
+    baseUrl = running.url;
+  });
+
+  afterEach(async () => {
+    await close(server);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("serves a page linking the agent card and the anchor topic", async () => {
+    const response = await fetch(`${baseUrl}/`);
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/^text\/html/);
+    expect(body).toContain("/.well-known/agent.json");
+    expect(body).toContain(TOPIC_ID);
+  });
+
+  it("answers the favicon quietly instead of falling through to 404", async () => {
+    const response = await fetch(`${baseUrl}/favicon.ico`);
+
+    expect(response.status).toBe(204);
+  });
+
+  it("still answers 404 for an unknown route", async () => {
+    const response = await fetch(`${baseUrl}/nope`);
+
+    expect(response.status).toBe(404);
+  });
+});
