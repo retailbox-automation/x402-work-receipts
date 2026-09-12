@@ -47,7 +47,20 @@ import {
   paymentAnchorHash,
   sealReceipt,
 } from "./receipts.js";
+import {
+  EXIT_ERROR,
+  EXIT_OK,
+  InputError,
+  type VerifyDeps,
+  parseMandate,
+  parseReceipt,
+  verdictLine,
+  verifyDocuments,
+} from "../verifier/cli.js";
+import { liveMirror } from "../verifier/mirror.js";
+import { statementText } from "../verifier/statement.js";
 import { JobStore, type Job } from "./store.js";
+import { demoRun, verifyPageHtml } from "./verify-page.js";
 import { assertDeliverableLinks, deliveryHash, parseDeliveryRequest, synthesizeResult } from "./work.js";
 
 /** Everything the service needs to know about itself. */
@@ -109,6 +122,12 @@ export type ContractorDeps = {
   settlements: SettlementLedger;
   /** The x402 middleware, or a stand-in in tests. */
   paymentGate: RequestHandler;
+  /**
+   * What the browser verifier reads. Defaults to the public mirror node, which
+   * is the only thing a verdict may ever be based on; a test injects recorded
+   * answers so it can run offline.
+   */
+  verifier?: VerifyDeps;
   now?: () => Date;
 };
 
@@ -126,6 +145,12 @@ export const DELIVER_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
 /** Delivery calls one IP may make inside that window. */
 export const DELIVER_RATE_LIMIT_MAX = 20;
+
+/** Window the browser verifier's per-IP rate limit counts within. */
+export const VERIFY_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+/** Verifications one IP may ask for inside that window. */
+export const VERIFY_RATE_LIMIT_MAX = 30;
 
 /** An anchor could not be written, so nothing may be issued that references it. */
 class AnchorFailure extends Error {
@@ -242,6 +267,27 @@ export function deliverRateLimit(): RequestHandler {
 }
 
 /**
+ * Per-IP limit on the browser verifier.
+ *
+ * `POST /verify` is free and does mirror-node reads on the caller's behalf, so
+ * it is the one route where a stranger can spend somebody else's request budget
+ * — the mirror node's. The limit is generous enough that a judge clicking
+ * through a page never meets it.
+ *
+ * @returns The middleware, counting {@link VERIFY_RATE_LIMIT_MAX} calls per
+ *   {@link VERIFY_RATE_LIMIT_WINDOW_MS}
+ */
+export function verifyRateLimit(): RequestHandler {
+  return rateLimit({
+    windowMs: VERIFY_RATE_LIMIT_WINDOW_MS,
+    limit: VERIFY_RATE_LIMIT_MAX,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many verification requests from this address; try again later" },
+  });
+}
+
+/**
  * Builds the Express application.
  *
  * @param deps - Configuration and collaborators
@@ -321,6 +367,7 @@ export function createContractorApp(deps: ContractorDeps): Express {
 <h1>x402 Work Receipts</h1>
 <p>Work orders and receipts between the AI agents of two organizations: signed by both sides, paid with x402 on Hedera, anchored on a public consensus topic, and verifiable by a stranger who has spoken to neither party.</p>
 <ul>
+<li><a href="/verify">Verify a receipt in the browser</a></li>
 <li><a href="/.well-known/agent.json">Agent card</a></li>
 <li><a href="/health">Health</a></li>
 <li><a href="https://github.com/retailbox-automation/x402-work-receipts">Source and README</a></li>
@@ -420,6 +467,83 @@ npm run customer -- order --story demo/fixtures/story-history-grouping.json \\
       return;
     }
     nextHandler();
+  });
+
+  /**
+   * The browser verifier: the page, the run it offers to load, and the check.
+   *
+   * All three sit ahead of the payment gate deliberately. Verification is the
+   * one thing in this service that must cost nothing and prove nothing about
+   * who is asking — a receipt a stranger cannot check for free is not evidence,
+   * it is a claim. The handler reads the public mirror node through
+   * `verifyDocuments` and never touches this contractor's job store: the
+   * verdict a visitor sees is not this service's opinion of its own work.
+   */
+  app.get("/verify", (_req, res) => {
+    res.set("Cache-Control", "public, max-age=300");
+    res.type("html").send(verifyPageHtml(config.topicId));
+  });
+
+  app.get("/verify/demo", (_req, res, nextHandler) => {
+    try {
+      const run = demoRun();
+      res.set("Cache-Control", "public, max-age=300");
+      res.json(run);
+    } catch (error) {
+      nextHandler(error);
+    }
+  });
+
+  app.post("/verify", verifyRateLimit(), async (req, res, nextHandler) => {
+    let topicId: string;
+    let receipt;
+    let mandate;
+    try {
+      const body = (req.body ?? {}) as { topicId?: unknown; receipt?: unknown; mandate?: unknown };
+      if (typeof body !== "object" || Array.isArray(body)) {
+        throw new InputError("the request body must be a JSON object");
+      }
+      const asked = typeof body.topicId === "string" ? body.topicId.trim() : "";
+      topicId = asked === "" ? config.topicId : asked;
+      receipt = parseReceipt(body.receipt, "the receipt");
+      mandate =
+        body.mandate === undefined || body.mandate === null
+          ? undefined
+          : parseMandate(body.mandate, "the work order");
+    } catch (error) {
+      // The verifier's own wording, unchanged: the reader is told what is wrong
+      // with the document in the same words the command would have used.
+      // Nothing of the document itself is logged.
+      res.status(400).json({
+        error: error instanceof Error ? error.message : "the request could not be read",
+      });
+      return;
+    }
+
+    let outcome;
+    try {
+      outcome = await verifyDocuments({ topicId, receipt, mandate }, deps.verifier ?? liveMirror);
+    } catch (error) {
+      nextHandler(error);
+      return;
+    }
+
+    if (outcome.code === EXIT_ERROR) {
+      // "I could not look" is not "it does not check out", and a page that
+      // showed the second when the first happened would be inventing a verdict.
+      res.status(502).json({ ok: false, error: outcome.output, exitCode: outcome.code });
+      return;
+    }
+
+    res.status(200).json({
+      ok: outcome.code === EXIT_OK,
+      results: outcome.checks,
+      summary: verdictLine(outcome.checks, outcome.code === EXIT_OK),
+      statement: statementText(),
+      links: outcome.links,
+      exitCode: outcome.code,
+      cli: cliEquivalent(topicId, mandate !== undefined),
+    });
   });
 
   app.use(deps.paymentGate);
@@ -781,6 +905,25 @@ function errors(error: unknown, _req: Request, res: Response, _next: express.Nex
   }
   console.error(error);
   res.status(500).json({ error: "Internal Server Error" });
+}
+
+/**
+ * The command that reaches the same verdict without this server.
+ *
+ * Printed on the page so that the answer to "why should I trust your website"
+ * is a command the reader can run instead of it.
+ *
+ * @param topicId - Topic that was verified
+ * @param withMandate - Whether a work order was supplied too
+ * @returns The equivalent `npm run verify` invocation
+ */
+function cliEquivalent(topicId: string, withMandate: boolean): string {
+  const lines = [`npm run verify -- --topic ${topicId} \\`, `  --receipt receipt.json`];
+  if (withMandate) {
+    lines[1] = `${lines[1]} \\`;
+    lines.push(`  --mandate mandate.json`);
+  }
+  return lines.join("\n");
 }
 
 /**
