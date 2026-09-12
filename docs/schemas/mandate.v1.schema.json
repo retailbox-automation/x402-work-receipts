@@ -2,20 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://a2a.getaim.ai/schemas/mandate.v1.schema.json",
   "title": "mandate.v1",
-  "description": "Наряд заказчика исполнителю: реальная стори из трекера заказчика, без денег и часов. Прикладной слой в поле `data` конверта Agent Post; schema-тег конверта = `mandate.v1`; ответ приходит в `thread_id` наряда.",
-  "$comment": "Источник и норматив: Retailbox A2A Bridge, docs/superpowers/specs/2026-09-04-a2a-pilot-mandate-receipt-design.md §3.1 (решения Михаила 04.09.2026). Денежных/часовых полей нет по решению 04.09 — валидатор Bridge их отвергает. Расширения (например payment в публичном профиле x402-work-receipts) — ОТДЕЛЬНОЙ схемой через allOf поверх этой, не правкой этого файла; unevaluatedProperties:false закрывает всё, что расширение не объявило.",
+  "description": "Work order from a customer agent to a contractor agent: one story out of the customer's tracker, carrying no money and no hours. Application layer inside the transport envelope's `data` field; the envelope's schema tag is `mandate.v1`; the reply arrives in the mandate's `thread_id`.",
   "type": "object",
   "unevaluatedProperties": false,
   "required": ["mandate_id", "story_ref", "story_url", "title", "acceptance", "frame", "issued_at", "issuer"],
   "properties": {
-    "mandate_id": { "type": "string", "minLength": 1, "maxLength": 64, "description": "id наряда у заказчика (uuid7)" },
-    "story_ref": { "type": "string", "minLength": 1, "maxLength": 128, "description": "id стори в трекере заказчика (Notion V3: uuid страницы)" },
-    "story_url": { "type": "string", "format": "uri", "pattern": "^https://", "maxLength": 2048, "description": "ссылка на карточку стори" },
-    "title": { "type": "string", "minLength": 1, "maxLength": 200, "description": "заголовок стори дословно" },
-    "acceptance": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "description": "критерии приёмки дословно из карточки" },
-    "frame": { "type": "string", "minLength": 1, "maxLength": 500, "description": "рамка словами: проект, эпик, ветка назначения, стейджинг" },
-    "due": { "type": "string", "format": "date", "description": "срок (дата)" },
-    "issued_at": { "type": "string", "format": "date-time", "description": "момент выдачи, UTC" },
-    "issuer": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,31}$", "description": "handle заказчика (= from конверта; формат handle из спеки Agent Post §6)" }
+    "mandate_id": { "type": "string", "minLength": 1, "maxLength": 64, "description": "identifier of the mandate at the customer (uuid7)" },
+    "story_ref": { "type": "string", "minLength": 1, "maxLength": 128, "description": "identifier of the story in the customer's tracker" },
+    "story_url": { "type": "string", "format": "uri", "pattern": "^https://", "maxLength": 2048, "description": "link to the story card" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200, "description": "story title, verbatim" },
+    "acceptance": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "description": "acceptance criteria, verbatim from the card" },
+    "frame": { "type": "string", "minLength": 1, "maxLength": 500, "description": "context in words: project, epic, target branch, staging" },
+    "due": { "type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "due date" },
+    "issued_at": { "type": "string", "format": "date-time", "description": "moment of issue, UTC" },
+    "issuer": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,31}$", "description": "customer handle (equal to the envelope's `from`)" }
   }
 }
