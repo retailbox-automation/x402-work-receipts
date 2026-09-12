@@ -134,10 +134,13 @@ construction.
 | Extra — verifiable payment audit trails on HCS | Six anchor records per order on an HCS topic, plus the verifier that reconstructs the chain from them. | **[PLANNED · Tasks 2 and 5]** |
 | Extra — Scheduled Transactions | A monthly retainer from Client Y to Agency X created as a Scheduled Transaction and referenced from the audit topic. | **[PLANNED · Task 7]** |
 
-**Secondary targets.** Hedera *"Improve the Harness"* — a separate PR to `hedera-dev/hedera-harness` adding a
-deterministic mirror-node verification step, **[PLANNED · Task 8, only if Tasks 1–6 are merged by 09-10]**.
-Bazantic *"x402 gateway + MCP for an API"* — exposing `order` / `collect` / `verify` as MCP tools over the
-same x402-gated service, **[PLANNED · Task 7]**.
+**Secondary targets.** Hedera *"Improve the Harness"* — **[SHIPPED, Task 8]**
+[`hedera-dev/hedera-harness#60`](https://github.com/hedera-dev/hedera-harness/pull/60), open against `dev`:
+not the mirror-node verification step originally planned here, but a spec-conformance fix ("report
+misspelled recipe keys instead of defaulting silently") found while reading that codebase. MCP —
+**[SHIPPED, Task 7]** `order` / `collect` / `verify` exposed as MCP tools (`npm run mcp`) over the same
+x402-gated service; the Bazantic prize this was originally scoped for was not pursued, since Bazantic's
+own eligibility criteria need an integration with its platform that this project does not have.
 
 ### Key Features (MVP)
 
@@ -216,9 +219,9 @@ the design: the project uses Hedera where Hedera is load-bearing and nowhere els
 | **HashScan** | Every settlement is linked from the receipt, the README table and the demo video | A judge, an auditor or a client can confirm a payment in one click without running anything. |
 | **Public mirror node** | The verifier's sole source of truth; also used by the spike client to re-check its own settlement | Third-party verifiability with no privileged access. |
 | **Hiero SDK (`@hiero-ledger/sdk` 2.85.0, pinned)** | Topic creation, message submission, account creation | Pinned deliberately: `@x402/hedera` depends on 2.85.0 and a standalone install pulls 2.87.0, producing two on-disk copies and a runtime failure inside the SDK's brand checks. |
-| **x402 `exact`-Hedera reference implementation** | Used as published, not forked | Any facilitator advertising `hedera:testnet` — including the official `https://x402.org/facilitator`, which Hedera's own [facilitators page](https://docs.hedera.com/solutions/ai/x402/facilitators) lists as Hedera-testnet capable — can settle these payments. The qualifying demo still settles through Blocky402. |
-| **`hedera-dev/hedera-harness`** *(secondary prize)* | **[PLANNED · Task 8]** A separate PR adding a deterministic mirror-node verification step, opened only after Tasks 1–6 are merged | Would contribute the project's most reusable idea back to the ecosystem's own tooling. |
-| **MCP** *(Bazantic prize)* | **[PLANNED · Task 7]** `order` / `collect` / `verify` exposed as MCP tools over the same x402-gated service | Would let any MCP-capable agent — not only this repository's CLI — order and pay for work. |
+| **x402 `exact`-Hedera reference implementation** | Used as published, not forked | Any facilitator advertising `hedera:testnet` — including the official x402 facilitator ([x402.org docs](https://docs.x402.org/core-concepts/facilitator)), which Hedera's own [facilitators page](https://docs.hedera.com/solutions/ai/x402/facilitators) lists as Hedera-testnet capable — can settle these payments. The qualifying demo still settles through Blocky402. |
+| **`hedera-dev/hedera-harness`** | **[SHIPPED, Task 8]** [PR #60](https://github.com/hedera-dev/hedera-harness/pull/60), open against `dev` — not the originally planned mirror-node verification step; a spec-conformance fix found while reading the codebase for that step | Contributes back to the ecosystem's own tooling, even though the shape of the contribution changed once the code was actually read. |
+| **MCP** | **[SHIPPED, Task 7]** `order` / `collect` / `verify` exposed as MCP tools over the same x402-gated service | Lets any MCP-capable agent — not only this repository's CLI — order and pay for work. The Bazantic prize this was scoped against was not pursued; it needs an integration with Bazantic's own platform that this project does not have. |
 
 ### Architecture Diagram
 
@@ -753,7 +756,7 @@ how judges will score. It assumes Tasks 1–6 land as planned; where it does not
 |---|---|---|---|
 | **Innovation (10%)** | 4/5 | Aligns to the track directly and introduces a capability the Hedera ecosystem does not have — staged settlement of a unit of work with a publicly verifiable counter-signed receipt. HCS used as a joint register between distrusting parties, and a receipt released *by* a 402, are both non-obvious. Short of 5 because the components (x402, HCS anchoring) exist individually; the novelty is the composition | Land the extras that make the composition unmistakable: agent identity resolved *by the verifier*, and the Scheduled-Transaction retainer referenced from the same audit topic. Show one screen where identity, payment and evidence are the same object |
 | **Feasibility (10%)** | 4/5 | Riskiest dependency retired on day 1 with three real settlements; complete Lean Canvas; a stack pinned for known-bad interactions; domain experience is direct (the schemas come from the RetailBox A2A Bridge spec for exactly this workflow). Short of 5 because "complete capability to take it to market" is a stretch for a solo team | Convert the revenue model from a model into a conversation: get one agency and one client-side finance person to react to the pricing shape, and record what they said |
-| **Execution (20%)** | 3/5 **today**, 4–5/5 if Tasks 1–6 land | Today the repository holds a design, a plan, schemas and a spike — a strong day-1 position, but the MVP is not built. Strategy, roadmap, GTM, design decisions and feedback cycles are all documented, which is where most submissions lose this criterion | Highest-leverage work in the whole event. Get `npm run demo` green twice in a row by 09-07, then treat CLI and verifier output as the UI: a clean check table, plain-language failure reasons, and clickable HashScan links. UI/UX is scored, and for an agent product the terminal output *is* the interface |
+| **Execution (20%)** | 3/5 **today**, 4–5/5 if Tasks 1–6 land | Today the repository holds a design, a plan, schemas and a spike — a strong day-1 position, but the MVP is not built. (Superseded by the appendix — the MVP shipped.) Strategy, roadmap, GTM, design decisions and feedback cycles are all documented, which is where most submissions lose this criterion | Highest-leverage work in the whole event. Get `npm run demo` green twice in a row by 09-07, then treat CLI and verifier output as the UI: a clean check table, plain-language failure reasons, and clickable HashScan links. UI/UX is scored, and for an agent product the terminal output *is* the interface |
 | **Integration (15%)** | 4/5, 5/5 with the extras | Multiple services used where each is load-bearing: HCS for evidence, x402 + facilitator for settlement, mirror node for trustless verification, ECDSA accounts for agents, Scheduled Transactions for the retainer. Ecosystem partners are real (Blocky402, HashScan, mirror node, Hiero SDK, and a contribution back to `hedera-harness`). The non-obvious usage the rubric rewards is present: HCS as a shared register, not a bus | Ship the HIP-991 topic-fee experiment or publish why it was rejected — a documented negative result on the fee interaction is worth more than silence. Land the harness PR |
 | **Validation (15%)** | 2/5 **today** | Honest floor: nobody outside the team has used it. The rubric's 3 requires at least one external feedback cycle with early adopters onboarded. Sources, cycles and dates are named, but naming is not running | The cheapest points available in the whole rubric. Run cycle 1 the day the demo is green: hand the verifier and one real receipt to three external people and record verbatim what they said. Publish the notes in the repository. That alone is the difference between 2 and 3 |
 | **Success (20%)** | 3/5 | The impact model is honest and arithmetic — 8 transactions per work order, HCS-weighted, growing per relationship — and every new organization must create Hedera accounts to participate at all. But at realistic hackathon-horizon volumes this does not move network TPS, and claiming otherwise would be the invented metric this document avoids | Strengthen with *quality* of impact rather than invented quantity: recurring non-speculative traffic, a non-crypto-native audience arriving through a normal commercial workflow, and a per-relationship growth curve. If a design partner is secured before submission, that is a real account-creation number and moves this to 4 |
@@ -806,3 +809,18 @@ because the rubric rewards numbers that make sense, and an honest small number i
 large one nobody can source. Have `spike/README.md` open in a tab for the questions: it is the strongest
 artefact in the repository on day 1, and the gotcha where our own checker was wrong about a payment that had
 actually settled is the most memorable thirty seconds available.
+
+---
+
+## Appendix — status at submission (2026-09-12)
+
+Tasks 1–7 of `docs/plans/2026-09-04-implementation-plan.md` are merged to `main`: the protocol library,
+the anchor layer, the contractor and customer agents, the verifier, the demo, documentation and
+hardening, plus the Task 7 extras (HCS-14 identity, a Scheduled Transaction retainer, and the MCP
+server). `npm run test:unit` passes 387/387. The contractor is hosted at
+**https://x402-work-receipts.zeabur.app**; the canonical hosted run is order
+`01a09079-548a-719d-9047-d8f4e028d126`, anchors #148–#153 on topic
+[`0.0.10426298`](https://hashscan.io/testnet/topic/0.0.10426298), verifier verdict `VERIFIED` (6/6
+applicable checks). [`hedera-dev/hedera-harness#60`](https://github.com/hedera-dev/hedera-harness/pull/60)
+is open against `dev`. What remains: the HIP-991 topic-fee experiment, kept in the Roadmap as a
+timeboxed follow-up rather than something this submission depends on.
