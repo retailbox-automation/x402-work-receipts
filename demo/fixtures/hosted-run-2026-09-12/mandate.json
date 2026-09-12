@@ -1,0 +1,28 @@
+{
+  "schema": "mandate.v1",
+  "from": "client-y-agent",
+  "to": "uaid:did:z6MkpmqamYikcwnfPSEAAUQaz8spVNEnmbHi8RL2iy28T8F6;uid=0;registry=self;proto=rest;nativeId=hedera:testnet:0.0.10365984",
+  "thread_id": "01a09578-9b95-7262-a5b9-84bda0ad65cf",
+  "issued_at": "2026-09-12T11:55:04.469Z",
+  "data": {
+    "mandate_id": "01a09578-9b95-7262-a5b9-84bda0ad65cf",
+    "story_ref": "3f9e2a7c-1b4d-4e8f-9a6b-2c5d7e8f9a0b",
+    "story_url": "https://client-y.example.com/board/story/3f9e2a7c",
+    "title": "Group trades by day and show the unread summary",
+    "acceptance": [
+      "Trades on the history screen are grouped by calendar day with a date header",
+      "Each day header shows the number of unread trades for that day",
+      "Existing sort order inside a day is preserved",
+      "The grouping survives a reload and applies to both the light and the dark theme"
+    ],
+    "frame": "Client Y web app; epic 'History screen'; target branch dev; verification on the client's staging",
+    "due": "2026-09-12",
+    "issued_at": "2026-09-12T11:55:04.469Z",
+    "issuer": "client-y-agent"
+  },
+  "sig": {
+    "alg": "ed25519",
+    "pub": "92a886c29970f8d4bb0fce808f6cf5106df37254b78950b075ebb6bd16fa59da",
+    "value": "f566d6ca02a8c50d74181275423073fd41dbe29957c347a7d30bb4274074a87b6f9cf6bf4c3276d5d5baf955c5415740af9fc392008cecbd7fd3852c6d7af90c"
+  }
+}

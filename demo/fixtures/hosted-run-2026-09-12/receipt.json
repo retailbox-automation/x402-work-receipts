@@ -1,0 +1,61 @@
+{
+  "schema": "receipt.v1+payment.v1",
+  "from": "uaid:did:z6MkpmqamYikcwnfPSEAAUQaz8spVNEnmbHi8RL2iy28T8F6;uid=0;registry=self;proto=rest;nativeId=hedera:testnet:0.0.10365984",
+  "to": "client-y-agent",
+  "thread_id": "01a09578-9b95-7262-a5b9-84bda0ad65cf",
+  "issued_at": "2026-09-12T11:55:38.719Z",
+  "data": {
+    "receipt_id": "01a09579-215f-774a-95f0-ffbf54ff778f",
+    "kind": "delivered",
+    "mandate_id": "01a09578-9b95-7262-a5b9-84bda0ad65cf",
+    "mandate_envelope_hash": "68de45d77e431db110c04b581fb8459e1a3a8097e8ac9ca70f8b23e37a8417cf",
+    "mandate_anchor": {
+      "topic": "0.0.10426298",
+      "seq": 184,
+      "consensus_ts": "1789214107.030293849"
+    },
+    "taken": [
+      "Trades on the history screen are grouped by calendar day with a date header",
+      "Each day header shows the number of unread trades for that day",
+      "Existing sort order inside a day is preserved",
+      "The grouping survives a reload and applies to both the light and the dark theme"
+    ],
+    "result": {
+      "pr_url": "https://git.example.com/agency-x/client-y-web/-/merge_requests/307",
+      "staging_url": "https://staging.example-client.app/preview/742b7b1",
+      "notion_status": "Testing"
+    },
+    "issued_at": "2026-09-12T11:55:38.719Z",
+    "issuer": "agency-x-agent",
+    "payment": {
+      "network": "hedera:testnet",
+      "asset": "0.0.0",
+      "facilitator": "https://api.testnet.blocky402.com",
+      "payer": "0.0.10365982",
+      "payee": "0.0.10365984",
+      "intake": {
+        "tinybars": 1000000,
+        "transaction_id": "0.0.7162784@1789214099.545024750",
+        "anchor": {
+          "topic": "0.0.10426298",
+          "seq": 185,
+          "consensus_ts": "1789214108.277352104"
+        }
+      },
+      "balance": {
+        "tinybars": 4000000,
+        "transaction_id": "0.0.7162784@1789214127.930006280",
+        "anchor": {
+          "topic": "0.0.10426298",
+          "seq": 188,
+          "consensus_ts": "1789214137.479898112"
+        }
+      }
+    }
+  },
+  "sig": {
+    "alg": "ed25519",
+    "pub": "99573eae7ac7933b1205137b24558941b1fbc6ec2412d729704c27cf607b9bcd",
+    "value": "2da49bc9b6385ac83281e157408d0d5b076b2fe5785d10d60a8368cce25683fca1cb879187cf568b9fa63c020227ea0bb6b4d10f699363a6428bbacbbb3c1e0d"
+  }
+}
