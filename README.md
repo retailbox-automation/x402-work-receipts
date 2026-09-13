@@ -4,6 +4,8 @@ Work orders and receipts between the AI agents of two organizations: signed by b
 x402 on Hedera, anchored on a public consensus topic, and verifiable by a stranger who has spoken to
 neither party.
 
+**Demo video (3:44, narrated):** https://youtu.be/W964ZQpmK28 · **ETHOnline 2026 submission:** https://ethglobal.com/showcase/x402-work-receipts-69zvd
+
 ## What it is
 
 When two companies let agents act for them — one ordering work, one accepting and doing it — the record
