@@ -233,6 +233,19 @@ describe("POST /mandates", () => {
     expect(anchors.records).toEqual([]);
   });
 
+  it("refuses a mandate 'signed' under the identity key (small-order forgery)", async () => {
+    // R = identity, S = 0 under the identity key satisfies the verify equation for any mandate.
+    const identity = `01${"00".repeat(31)}`;
+    const forged = { ...mandateEnvelope(), sig: { alg: "ed25519", pub: identity, value: identity + "00".repeat(32) } };
+
+    const response = await postMandate(forged);
+    expect(response.status).toBe(422);
+    const body = (await response.json()) as { receipt: Envelope<Receipt> };
+    expect(body.receipt.data.kind).toBe("rejected");
+    expect(body.receipt.data.reason).toMatch(/signature/i);
+    expect(anchors.records).toEqual([]);
+  });
+
   it("refuses a mandate that carries money fields the protocol forbids", async () => {
     const envelope = mandateEnvelope({ ...mandateFixture(), hours: 12 } as unknown as Mandate);
 

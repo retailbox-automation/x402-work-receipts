@@ -112,6 +112,16 @@ describe("check 1 — receipt signature", () => {
     });
     expect(checkReceiptSignature(input).ok).toBe(false);
   });
+
+  it("rejects a receipt 'signed' under the identity key (small-order forgery)", () => {
+    // R = identity, S = 0 under the identity key satisfies the verify equation for any receipt.
+    const identity = `01${"00".repeat(31)}`;
+    const input = mutated(candidate => {
+      candidate.receipt.data.result!.pr_url = "https://git.example.com/other/-/merge_requests/1";
+      candidate.receipt.sig = { alg: "ed25519", pub: identity, value: identity + "00".repeat(32) };
+    });
+    expect(checkReceiptSignature(input).ok).toBe(false);
+  });
 });
 
 describe("check 2 — mandate hash linkage", () => {

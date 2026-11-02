@@ -148,6 +148,13 @@ describe("parseAcceptedResponse", () => {
     expect(() => parseAcceptedResponse({ receipt: forged }, mandateEnvelope)).toThrow(/signature/i);
   });
 
+  it("refuses a receipt 'signed' under the identity key (small-order forgery)", () => {
+    // R = identity, S = 0 under the identity key satisfies the verify equation for any receipt.
+    const identity = `01${"00".repeat(31)}`;
+    const forged = { ...acceptance(), sig: { alg: "ed25519" as const, pub: identity, value: identity + "00".repeat(32) } };
+    expect(() => parseAcceptedResponse({ receipt: forged }, mandateEnvelope)).toThrow(/signature/i);
+  });
+
   it("refuses a receipt that points at a different order", () => {
     const other = acceptance({ mandate_envelope_hash: "0".repeat(64) });
     expect(() => parseAcceptedResponse({ receipt: other }, mandateEnvelope)).toThrow(/envelope hash/i);

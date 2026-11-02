@@ -20,6 +20,47 @@ const SECRET_KEY_HEX_LENGTH = 64;
 const PUBLIC_KEY_HEX_LENGTH = 64;
 const SIGNATURE_HEX_LENGTH = 128;
 
+/** The field prime of edwards25519, 2^255 - 19. */
+const ED25519_P = 2n ** 255n - 19n;
+
+/**
+ * Ed25519 points of small order (1, 2, 4, 8), by y coordinate: the blocklist
+ * of libsodium's `ge25519_has_small_order`, including the non-canonical
+ * encodings of 0 and 1 (p and p + 1). The sign bit of x is ignored, so these
+ * seven values cover all eight points. Under a small-order public key the
+ * signature R = identity, S = 0 satisfies the verify equation for ANY
+ * message — @noble/ed25519 accepts it by default (ZIP-215), and so does
+ * OpenSSL 4.0 — which makes the key one anyone can sign with.
+ */
+export const ED25519_SMALL_ORDER_Y: ReadonlySet<bigint> = new Set([
+  0n,
+  1n,
+  ED25519_P - 1n,
+  ED25519_P,
+  ED25519_P + 1n,
+  2707385501144840649318225287225658788936804267575313519463743609750303402022n,
+  55188659117513257062467267217118295137698188065244968500265048394206261417927n,
+]);
+
+/**
+ * Says why 32 bytes are not an acceptable Ed25519 public key or signature R.
+ *
+ * Accepted: a canonical encoding (y < p) of a point that is not of small
+ * order. Applied to the key and to the R half of every signature before the
+ * library verifies, so the check does not depend on the library's options.
+ *
+ * @param bytes - Candidate point encoding
+ * @returns "length", "small-order" or "non-canonical"; null when acceptable
+ */
+export function ed25519PointProblem(bytes: Uint8Array): "length" | "small-order" | "non-canonical" | null {
+  if (!(bytes instanceof Uint8Array) || bytes.length !== 32) return "length";
+  let y = 0n;
+  for (let i = 31; i >= 0; i--) y = (y << 8n) | BigInt(i === 31 ? bytes[i] & 0x7f : bytes[i]);
+  if (ED25519_SMALL_ORDER_Y.has(y)) return "small-order";
+  if (y >= ED25519_P) return "non-canonical";
+  return null;
+}
+
 /**
  * Derives the public key of an Ed25519 secret key.
  *
@@ -59,7 +100,9 @@ export function signEnvelope<T>(body: Omit<Envelope<T>, "sig">, privateKeyHex: s
  * Checks an envelope's signature against the public key it carries.
  *
  * Malformed envelopes are a failed verification, not an exception, so callers
- * can treat any untrusted input the same way.
+ * can treat any untrusted input the same way. A small-order or non-canonical
+ * key or R is refused before verifying (see `ed25519PointProblem`), and the
+ * library runs its strict RFC 8032 branch (`zip215: false`).
  *
  * @param env - The envelope to check
  * @returns True when the signature covers the canonical body
@@ -69,8 +112,11 @@ export function verifyEnvelope(env: Envelope<unknown>): boolean {
     const { sig, ...body } = env;
     if (!sig || sig.alg !== "ed25519") return false;
     if (!isHex(sig.pub, PUBLIC_KEY_HEX_LENGTH) || !isHex(sig.value, SIGNATURE_HEX_LENGTH)) return false;
+    const pub = toBytes(sig.pub);
+    const value = toBytes(sig.value);
+    if (ed25519PointProblem(pub) !== null || ed25519PointProblem(value.subarray(0, 32)) !== null) return false;
     const message = utf8ToBytes(canonicalize(body));
-    return ed.verify(toBytes(sig.value), message, toBytes(sig.pub));
+    return ed.verify(value, message, pub, { zip215: false });
   } catch {
     return false;
   }
