@@ -18,7 +18,6 @@ import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes } from "@noble/hashes/
 import { describe, expect, it } from "vitest";
 import { canonicalize } from "../../protocol/canonical.js";
 import {
-  ED25519_SMALL_ORDER_Y,
   ed25519PointProblem,
   publicKeyHex,
   signEnvelope,
@@ -188,8 +187,19 @@ describe("the blocklist", () => {
       points.add(`${x},${y}`);
     }
     expect(points.size).toBe(8);
+  });
+
+  it("calls only those y values small-order (random encodings)", () => {
     const ys = new Set(SMALL_ORDER_ENCODINGS.map(raw => leInt(raw) & ((1n << 255n) - 1n)));
-    expect(ys).toEqual(new Set(ED25519_SMALL_ORDER_Y));
+    expect(ys.size).toBe(7);
+    for (let i = 0; i < 2000; i++) {
+      const raw = randomBytes(32);
+      const y = leInt(raw) & ((1n << 255n) - 1n);
+      const problem = ed25519PointProblem(raw);
+      if (ys.has(y)) expect(problem).toBe("small-order");
+      else if (y >= P) expect(problem).toBe("non-canonical");
+      else expect(problem).not.toBe("small-order");
+    }
   });
 });
 
@@ -203,5 +213,45 @@ describe("honest envelopes", () => {
       expect(verifyEnvelope(env)).toBe(true);
       expect(verifyEnvelope({ ...env, data: { content: "other" } })).toBe(false);
     }
+  });
+});
+
+describe("mixed-order keys and R (the library's equation is cofactored)", () => {
+  const T8 = ed.Point.fromBytes(enc(ORDER8_Y[0], 0), false); // a point of order 8
+
+  function scalarOf(secretHex: string): bigint {
+    const h = sha512(hexToBytes(secretHex)).slice(0, 32);
+    h[0] &= 248;
+    h[31] &= 127;
+    h[31] |= 64;
+    return leInt(h);
+  }
+
+  it("refuses an owner's R = rB + T and an owner's key aB + T", () => {
+    for (let i = 0; i < 8; i++) {
+      const secret = bytesToHex(randomBytes(32));
+      const a = scalarOf(secret);
+      const r = (leInt(randomBytes(32)) % (L - 1n)) + 1n;
+      const body = bodyWith(`mixed-${i}`);
+      const msg = message(body);
+      // R = rB + T under the honest key
+      const pk = hexToBytes(publicKeyHex(secret));
+      const R1 = ed.Point.BASE.multiply(r).add(T8).toBytes();
+      const sig1 = concat(R1, enc((r + (leInt(sha512(concat(concat(R1, pk), msg))) % L) * a) % L, 0));
+      expect(ed.verify(sig1, msg, pk, { zip215: false })).toBe(true); // must-differ
+      expect(ed25519PointProblem(R1)).toBe("torsion");
+      expect(verifyEnvelope({ ...body, sig: { alg: "ed25519", pub: bytesToHex(pk), value: bytesToHex(sig1) } })).toBe(false);
+      // key aB + T, R = rB
+      const mixed = ed.Point.BASE.multiply(a % L).add(T8).toBytes();
+      const R2 = ed.Point.BASE.multiply(r).toBytes();
+      const sig2 = concat(R2, enc((r + (leInt(sha512(concat(concat(R2, mixed), msg))) % L) * a) % L, 0));
+      expect(ed.verify(sig2, msg, mixed, { zip215: false })).toBe(true); // must-differ
+      expect(ed25519PointProblem(mixed)).toBe("torsion");
+      expect(verifyEnvelope({ ...body, sig: { alg: "ed25519", pub: bytesToHex(mixed), value: bytesToHex(sig2) } })).toBe(false);
+    }
+  });
+
+  it("calls a y that is not on the curve not-a-point", () => {
+    expect(ed25519PointProblem(enc(2n, 0))).toBe("not-a-point"); // y = 2: x^2 is not a square
   });
 });

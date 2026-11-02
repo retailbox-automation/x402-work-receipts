@@ -32,7 +32,7 @@ const ED25519_P = 2n ** 255n - 19n;
  * message — @noble/ed25519 accepts it by default (ZIP-215), and so does
  * OpenSSL 4.0 — which makes the key one anyone can sign with.
  */
-export const ED25519_SMALL_ORDER_Y: ReadonlySet<bigint> = new Set([
+const ED25519_SMALL_ORDER_Y: ReadonlySet<bigint> = new Set([
   0n,
   1n,
   ED25519_P - 1n,
@@ -46,18 +46,31 @@ export const ED25519_SMALL_ORDER_Y: ReadonlySet<bigint> = new Set([
  * Says why 32 bytes are not an acceptable Ed25519 public key or signature R.
  *
  * Accepted: a canonical encoding (y < p) of a point that is not of small
- * order. Applied to the key and to the R half of every signature before the
- * library verifies, so the check does not depend on the library's options.
+ * order and lies in the prime-order subgroup — an honest key (aB) and an
+ * honest R (rB) always do. The library's verify equation is cofactored, so it
+ * ignores a torsion component: without the subgroup check a key's owner could
+ * sign with R = rB + T or under a key aB + T, which libsodium refuses. Applied
+ * to the key and to the R half of every signature before the library verifies,
+ * so the check does not depend on the library's options.
  *
  * @param bytes - Candidate point encoding
- * @returns "length", "small-order" or "non-canonical"; null when acceptable
+ * @returns "length", "small-order", "non-canonical", "not-a-point" or "torsion"; null when acceptable
  */
-export function ed25519PointProblem(bytes: Uint8Array): "length" | "small-order" | "non-canonical" | null {
+export function ed25519PointProblem(
+  bytes: Uint8Array,
+): "length" | "small-order" | "non-canonical" | "not-a-point" | "torsion" | null {
   if (!(bytes instanceof Uint8Array) || bytes.length !== 32) return "length";
   let y = 0n;
   for (let i = 31; i >= 0; i--) y = (y << 8n) | BigInt(i === 31 ? bytes[i] & 0x7f : bytes[i]);
   if (ED25519_SMALL_ORDER_Y.has(y)) return "small-order";
   if (y >= ED25519_P) return "non-canonical";
+  let point: ed.Point;
+  try {
+    point = ed.Point.fromBytes(bytes, false);
+  } catch {
+    return "not-a-point";
+  }
+  if (!point.isTorsionFree()) return "torsion";
   return null;
 }
 
@@ -100,8 +113,8 @@ export function signEnvelope<T>(body: Omit<Envelope<T>, "sig">, privateKeyHex: s
  * Checks an envelope's signature against the public key it carries.
  *
  * Malformed envelopes are a failed verification, not an exception, so callers
- * can treat any untrusted input the same way. A small-order or non-canonical
- * key or R is refused before verifying (see `ed25519PointProblem`), and the
+ * can treat any untrusted input the same way. A small-order, non-canonical or
+ * mixed-order key or R is refused before verifying (see `ed25519PointProblem`), and the
  * library runs its strict RFC 8032 branch (`zip215: false`).
  *
  * @param env - The envelope to check
